@@ -46,3 +46,41 @@ Deviations:
   supported uniformly across OpenAI-compatible providers. Pydantic validates the result.
 - HTTP and DB access is synchronous (httpx.Client, sync SQLAlchemy) for simplicity; FastAPI runs
   sync routes in its threadpool.
+
+## P1 Ingestion — done
+
+Built:
+- `app/ingest/greenhouse.py`, `lever.py`, `ashby.py`: fetch + map to `NormalizedJob` (endpoints and field
+  names checked against real responses: Greenhouse `first_published`/`content` (entity-escaped HTML),
+  Lever `createdAt`/`lists`/`workplaceType`, Ashby `isRemote`/`secondaryLocations`/`compensation`).
+- `app/ingest/http.py`: polite client — global 2 req/s limiter, 15 s timeout, 3 retries with
+  exponential backoff on 429/5xx/transport errors, User-Agent `JobLens/0.1 (...)` (no email).
+- `app/ingest/normalize.py`: HTML→text (list items as `- ` lines, whitespace collapse, 20,000-char cap),
+  `content_hash`, India/remote location filter.
+- `app/ingest/store.py`: upsert with first/last seen, `is_active=false` for a company's unseen jobs,
+  re-processing on content-hash change, repost detection (same normalized company+title within 90 days).
+- `app/ingest/run.py` (`python -m app.ingest.run`), `app/ingest/paste.py`, `POST /jobs/paste`,
+  `GET /jobs/{id}`, `POST /admin/ingest` (X-API-Key), `app/pipeline.py` (steps plug in from P2 on).
+- `config/companies.yaml`: **87 companies, every token verified with a real HTTP request** by
+  `scripts/verify_companies.py` (257 probes; 120 returned 200 with a valid payload; kept the 87 with
+  ≥1 India/remote job). Full probe log incl. failures: `config/companies_verification.json`.
+- Recorded real API responses for tests: `tests/fixtures/{greenhouse,lever,ashby}_board.json`
+  (`scripts/record_fixtures.py`).
+
+Tests: 42 passed (respx-mocked boards from recorded fixtures; DB tests for upsert/idempotency/
+deactivation/reposts/paste/admin auth). ruff + mypy clean.
+
+Real run (dev DB, 2026-11-18): 87/87 companies OK, **987 active jobs stored**, 10,990 filtered out
+(non-India/non-remote or over the cap). Re-run: 0 new, 987 unchanged, 0 deactivated → idempotent.
+
+Done-when: 300+ active jobs ✔ (987) · re-run idempotent ✔ · tests use fixtures ✔.
+
+Deviations / additions:
+- Location filter (settings `ingest.india_keywords/remote_keywords/remote_exclude`): keeps India
+  locations and remote roles without a non-India restriction. The spec has `country_hint` "used for
+  filtering" but no rule; this is the rule chosen.
+- `ingest.max_jobs_per_company: 20` (India first, then newest) keeps the pool inside the spec's
+  300–1,000 target; without it the verified boards give ~2,000+ India/remote jobs.
+  Known limitation: if a company posts new jobs that push an older one out of its top 20, the older
+  one is marked inactive even if still live.
+- Paste jobs without a company store `company=""` (column is NOT NULL); trust scoring treats it as missing.

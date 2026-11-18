@@ -107,6 +107,7 @@ class IngestCfg(BaseModel):
     user_agent: str = "JobLens/0.1"
     max_description_chars: int = 20000
     repost_window_days: int = 90
+    max_jobs_per_company: int = 0
     india_keywords: list[str] = []
     remote_keywords: list[str] = []
     remote_exclude: list[str] = []

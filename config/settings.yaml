@@ -32,6 +32,8 @@ ingest:
   user_agent: "JobLens/0.1 (open-source job matcher; public ATS board API client)"
   max_description_chars: 20000
   repost_window_days: 90
+  # Cap per company to keep the pool at 300-1,000 jobs (India locations first, then newest). 0 = no cap.
+  max_jobs_per_company: 20
   # Keep only jobs whose location looks like India or open remote. Empty list = keep all.
   india_keywords: [india, bengaluru, bangalore, hyderabad, pune, mumbai, delhi, "new delhi", gurugram, gurgaon,
                    noida, chennai, kolkata, ahmedabad, jaipur, kochi, coimbatore, indore, chandigarh, trivandrum,
