@@ -1,0 +1,6 @@
+SYSTEM:
+Summarize this job-search conversation in at most 120 words. Keep the user's stated goals, preferences and the job ids discussed with their outcome. No commentary.
+USER:
+Previous summary: {previous_summary}
+Messages:
+{messages}

@@ -84,3 +84,43 @@ Deviations / additions:
   Known limitation: if a company posts new jobs that push an older one out of its top 20, the older
   one is marked inactive even if still live.
 - Paste jobs without a company store `company=""` (column is NOT NULL); trust scoring treats it as missing.
+
+## P2 Extraction — done (offline heuristic; real-LLM run pending a key)
+
+Built:
+- Prompts `app/extract/prompts/`: `facts_v1` (Appendix A.1 verbatim), `facts_v2` (stricter evidence wording,
+  BACHELORS/MASTERS/PHD codes, skill/experience guidance — the second prompt version for E2), `profile_v1`,
+  `explain_v1`, `judge_v1`, `agent_v1` (Appendix A verbatim), `summary_v1`, `rerank_v1`.
+- `app/extract/facts.py`: prompt → `chat_json` (temperature 0, cached) → shape coercion → Pydantic →
+  up to 2 retries with the validation error appended → evidence check (whitespace/case-normalized
+  substring; unsupported values set to null and logged as `evidence_missing`) → normalization (skill
+  synonym map, degree codes, title-cased/canonical city names) → `job_facts` row with model,
+  prompt_version, valid. Input capped at `(max_input_tokens-1500)*4` chars (≈6,000-token request).
+- `app/extract/vocab.py` (synonyms, degree codes, specializations, Indian cities).
+- `app/extract/heuristic.py`: rule-based extractor used by the fake LLM (`fake-heuristic`). Every value
+  quotes a verbatim span. Red-flag rules skip negated / anti-scam-notice mentions.
+- `app/extract/profile.py` + `app/api/routes_profiles.py`: `POST /profiles/from-resume` (pypdf; <200 chars →
+  `resume_text_too_short`), `POST/GET/PUT/DELETE /profiles/{id}` (delete cascades chats, memory, explanations).
+- `python -m app.pipeline [--steps facts,search,trust] [--all]` to (re)process stored jobs.
+
+Tests: 65 passed. ruff + mypy clean.
+
+Real run on the 987 dev jobs (fake-heuristic): 987/987 schema-valid, 0 evidence drops, 0 red flags
+on company-board jobs (after fixing two false-positive patterns found by inspecting the output:
+"WhatsApp" as a product name, and "we will never ask you to pay a fee" notices). Field coverage:
+locations 89%, required_skills 73%, experience 66%, work_mode 60%, degrees 26%, pay 24%,
+employment_type 16% (most ATS posts do not state it), graduation_years 2%, min_cgpa 0%.
+
+Done-when:
+- "90% of jobs have valid facts" ✔ for the heuristic (100%), but this is trivially true for a rule-based
+  extractor; **the real-LLM rate is not measured yet** (no API key). Re-run: `python -m app.pipeline --steps facts --all`.
+- "evidence failures logged" ✔ (`evidence_missing` log events; exercised in tests with bad evidence).
+- "profile saved from a real resume" ✘ — tested end to end with a generated text PDF only; needs Ravi's resume.
+
+Deviations:
+- Evidence is checked against a "posting text" = `Title/Company/Location` header lines + description,
+  not `description_text` alone, because ATS location/company are metadata fields, not in the text.
+- Evidence matching also normalizes typographic quotes/dashes (in addition to whitespace and case).
+- Degree codes extended with BACHELORS, MASTERS, PHD (spec list ends with "..."); eligibility treats
+  BACHELORS as satisfied by any bachelor- or master-level code.
+- Fake-LLM outputs use a per-process memory cache, never the `llm_cache` table (stale outputs after code changes).

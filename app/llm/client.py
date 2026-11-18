@@ -263,7 +263,8 @@ def get_llm(role: str = "extract", cache: CacheStore | None = None) -> LLMClient
         except Exception:  # noqa: BLE001
             cache = MemoryCache()
     if s.llm_provider == "fake":
-        return LLMClient(FakeProvider(), "fake-heuristic", cache, s.cfg.budget.daily_tokens)
+        # Never persist fake outputs: the key would not change when the heuristic code changes.
+        return LLMClient(FakeProvider(), "fake-heuristic", MemoryCache(), s.cfg.budget.daily_tokens)
     key, base = s.env.llm_api_key, s.env.llm_base_url
     if role == "judge" and s.env.judge_api_key:
         key, base = s.env.judge_api_key, s.env.judge_base_url or base

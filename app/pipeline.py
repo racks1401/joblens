@@ -48,3 +48,34 @@ def process_jobs(s: Session, job_ids: Sequence[int], steps: Sequence[str] | None
         out[name] = fn(s, list(job_ids), **kw)
         log_event(log, "pipeline_step", step=name, jobs=len(job_ids), result=out[name])
     return out
+
+
+def main() -> None:
+    """python -m app.pipeline [--steps facts,search,trust] [--all]
+
+    Default: process active jobs missing facts. --all re-processes every active job (e.g. after
+    adding an LLM key or changing the prompt version).
+    """
+    import argparse
+
+    from sqlalchemy import select
+
+    from app.db import session_factory
+    from app.logs import setup_logging
+    from app.models import Job, JobFactsRow
+
+    setup_logging()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--steps", default="facts,search,trust")
+    ap.add_argument("--all", action="store_true")
+    args = ap.parse_args()
+    with session_factory()() as s:
+        q = select(Job.id).where(Job.is_active.is_(True)).order_by(Job.id)
+        if not args.all:
+            q = q.outerjoin(JobFactsRow, JobFactsRow.job_id == Job.id).where(JobFactsRow.job_id.is_(None))
+        ids = list(s.execute(q).scalars())
+        print(process_jobs(s, ids, steps=args.steps.split(",")), f"jobs={len(ids)}")
+
+
+if __name__ == "__main__":
+    main()

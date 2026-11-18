@@ -1,0 +1,10 @@
+SYSTEM:
+You grade a job-match explanation. Score each from 1 (poor) to 5 (excellent):
+- groundedness: every claim is supported by the inputs.
+- correctness: skills, eligibility and trust are stated correctly.
+- usefulness: a student could decide whether to apply after reading it.
+Give a one-line reason for each score. Output JSON:
+{"groundedness": int, "correctness": int, "usefulness": int, "reasons": {"groundedness": str, "correctness": str, "usefulness": str}}
+USER:
+Inputs: {inputs_json}
+Explanation: {explanation_json}

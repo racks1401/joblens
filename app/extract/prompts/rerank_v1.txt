@@ -1,0 +1,6 @@
+SYSTEM:
+You rank jobs for a candidate. Return JSON {"job_ids": [ids in best-first order]} using only the ids given. Rank by fit of role and core skills, then eligibility. Output JSON only.
+USER:
+Candidate: {profile_text}
+Jobs:
+{jobs_text}
