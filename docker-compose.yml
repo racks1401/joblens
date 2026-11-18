@@ -1,0 +1,41 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: joblens
+      POSTGRES_PASSWORD: joblens
+      POSTGRES_DB: joblens
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U joblens -d joblens"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: {context: ., target: api}
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg://joblens:joblens@db:5432/joblens
+      FASTEMBED_CACHE: /app/models/fastembed
+    ports: ["8000:8000"]
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./evals/results:/app/evals/results
+      - ./evals/data:/app/evals/data
+    depends_on:
+      db: {condition: service_healthy}
+
+  ui:
+    build: {context: ., target: ui}
+    environment:
+      API_URL: http://api:8000
+    ports: ["8501:8501"]
+    depends_on: [api]
+
+volumes:
+  pgdata:

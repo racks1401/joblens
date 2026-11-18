@@ -1,0 +1,42 @@
+# Weights, thresholds, models and prompt versions. Secrets live in .env.
+# ${VAR:-default} is replaced from the environment.
+models:
+  extract: ${EXTRACT_MODEL:-llama-3.1-8b-instant}
+  explain: ${EXPLAIN_MODEL:-llama-3.1-8b-instant}
+  agent: ${AGENT_MODEL:-llama-3.3-70b-versatile}
+  judge: ${JUDGE_MODEL:-gemini-2.0-flash}   # different model family from explain
+prompts: {facts: facts_v1, profile: profile_v1, explain: explain_v1, judge: judge_v1, agent: agent_v1}
+llm: {timeout_s: 60, max_retries: 2, max_input_tokens: 6000}
+embeddings:
+  default_model: minilm
+  default_variant: structured
+  models:
+    minilm: {name: sentence-transformers/all-MiniLM-L6-v2, query_prefix: ""}
+    bge-small: {name: BAAI/bge-small-en-v1.5, query_prefix: "Represent this sentence for searching relevant passages: "}
+  batch_size: 64
+search: {rrf_k: 60, candidates: 50}
+ranking: {w_retrieval: 0.65, w_skill: 0.35, check_penalty: 0.05, risky_factor: 0.7, caution_factor: 0.9}
+trust:
+  levels: {ok: 70, caution: 40}
+  deltas: {age_60: -15, age_120: -30, repost: -10, money: -25, offplatform: -15,
+           free_email: -10, unrealistic_pay: -10, missing_company: -10, classifier_max: -40}
+  repost_min: 2
+  unrealistic_intern_pay_inr_month: 200000
+  classifier_path: models/scam_clf.joblib
+agent: {max_steps: 6, history_messages: 10, summary_every: 6, tool_timeout_s: 10, temperature: 0.2}
+budget: {daily_tokens: 300000}
+ingest:
+  requests_per_second: 2
+  timeout_s: 15
+  retries: 3
+  user_agent: "JobLens/0.1 (open-source job matcher; public ATS board API client)"
+  max_description_chars: 20000
+  repost_window_days: 90
+  # Keep only jobs whose location looks like India or open remote. Empty list = keep all.
+  india_keywords: [india, bengaluru, bangalore, hyderabad, pune, mumbai, delhi, "new delhi", gurugram, gurgaon,
+                   noida, chennai, kolkata, ahmedabad, jaipur, kochi, coimbatore, indore, chandigarh, trivandrum,
+                   thiruvananthapuram, mysore, mysuru, "ncr"]
+  remote_keywords: [remote, anywhere, worldwide, global, "work from home", wfh, apac, asia]
+  remote_exclude: [us, usa, "u.s.", "united states", canada, uk, "united kingdom", europe, emea, eu, germany,
+                   france, spain, brazil, latam, mexico, australia, "north america", americas, japan, singapore,
+                   ireland, netherlands, poland, israel, "new york", "san francisco", london, berlin, toronto]

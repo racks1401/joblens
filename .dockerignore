@@ -1,0 +1,12 @@
+.venv
+.pgdata*
+.git
+__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.env
+data/raw
+models/fastembed
+tests
+docs
