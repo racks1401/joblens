@@ -124,3 +124,23 @@ Deviations:
 - Degree codes extended with BACHELORS, MASTERS, PHD (spec list ends with "..."); eligibility treats
   BACHELORS as satisfied by any bachelor- or master-level code.
 - Fake-LLM outputs use a per-process memory cache, never the `llm_cache` table (stale outputs after code changes).
+
+## P3 Search + match — code done, live check incomplete
+
+Built: `app/search/text.py` (raw + structured texts, profile query text per 11.2), `embed.py` (fastembed
+MiniLM + bge-small, hashing fake for tests), `index.py` (pipeline step: search_text + 2 models x 2 variants),
+`keyword.py` (FTS, websearch_to_tsquery, ts_rank_cd), `vector.py` (pgvector cosine), `hybrid.py` (RRF k=60,
+top 50, max-normalized), `rank.py` (skill overlap + final score 11.4), `app/eligibility.py` (all 8 rules,
+verdict logic, evidence per rule), `service.py`, `GET /search`, `GET /matches/{profile_id}`.
+
+Tests: 110 passed (RRF/overlap/score hand-computed, every eligibility rule, DB end-to-end search/matches).
+
+Not done: the real fastembed run over the 987 dev jobs was still in progress when the session stopped
+(640/987 embedded). The live `/matches` check for the builder profile was not run.
+Finish: `python -m app.pipeline --steps search --all`.
+
+Additions: empty `preferred_locations` = no location preference (PASS); Delhi NCR cities treated as one
+group; approximate FX table for the pay rule; `eligible_only` filter excludes INELIGIBLE only.
+
+## Not started: P4 (metrics.py + tests and evals/data/profiles.jsonl are written; runner, pool,
+## guidelines and drafts are not), P5, P6, P7.
