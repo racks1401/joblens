@@ -523,4 +523,43 @@ proposal: add it as an anonymized `p00` (no name) before drafting.
    scam-style posts; the classifier gave the Indian "training fee + guaranteed placement" post only 0.07.
    E6 (30 hand-collected Indian examples) is still pending.
 
+## Session 12 (2026-11-19)
+
+1. **E1 depth bug fixed**: E1 now fuses at production depth (50 candidates per list) before cutting to top-10.
+   Updated (small, noisy; unlabeled = not relevant):
+
+   | Set | Method | P@5 | nDCG@10 | MRR |
+   |---|---|---|---|---|
+   | p00 human (24 pairs) | keyword | 0.60 | 0.345 | 0.333 |
+   | | vector | 0.80 | 0.783 | 1.000 |
+   | | hybrid | 0.80 | 0.628 | 1.000 (1/10 unlabeled) |
+   | human-only, 5 profiles (49 pairs) | keyword | 0.20 | 0.272 | 0.142 |
+   | | vector | 0.20 | 0.273 | 0.200 |
+   | | hybrid | 0.28 | 0.372 | 0.273 |
+   | **includes LLM drafts** (134 pairs) | keyword | 0.56 | 0.446 | 0.267 |
+   | | vector | 0.52 | 0.468 | 0.350 |
+   | | hybrid | 0.68 | 0.519 | 0.423 |
+2. **Keyword query experiment** (`python -m evals.keyword_experiment`, not production): role-words match + skill
+   boost vs current. With-drafts set: keyword nDCG@10 0.446 → 0.369, hybrid 0.519 → 0.422 (MRR 0.423 → 0.375);
+   p00 sanity check agrees. Biased toward the current query (the labeled pool came from current methods;
+   role_boost puts 16/50 unlabeled jobs in keyword top-10). Not clearly better → **production unchanged**,
+   `/matches` default unchanged.
+3. **JNJ re-paste**: the file now starts with "Company: Johnson & Johnson". Old pieces 1298–1301 marked inactive;
+   new pieces 1302–1305 (facts_v5), company set: JJT Internship (internship, ₹75k/month), TLDP (full_time,
+   ₹15,65,000/yr), Product Engineer (type not stated, ₹15,52,000/yr), "needs human title" (internship, ₹75k/month,
+   degrees MASTERS + MCA). Branches for all: computer science, electronics, electrical engineering, mathematics and
+   computing ("ee" and "mnc" now mapped). Your eligibility: CHECK for all (batch unknown, Hyderabad soft-fail).
+4. **Trust**: pasted jobs no longer get the "no job URL" penalty (company name still checked). Elip 90 → 100,
+   SpectoVX 89 → 99, JNJ pieces 87–89 → 97–99; all ok.
+5. **Role-family check (proposal only):** 100ms "Benefit Verification Specialist - AI Agents (Healthcare)" is data_ml
+   because the rule matches "ai" anywhere in the title (here a team/product suffix); its required skills are
+   non-technical (insurance verification, payer portals, CPT/HCPCS). Of 113 in-scope board jobs, 28 titles contain a
+   non-tech-looking word: ~6 clearly non-tech, ~16 borderline (IT, support, consulting), ~6 fine. Prototype (in
+   memory): classify on the title head (before " - ", "(", ":"), reject hard non-tech words (sales, revenue,
+   partnerships, content, risk management, verification, benefits, recruiting, people operations) unless the head
+   is engineer/developer/SDE/scientist, and veto weak title words (ai, platform, systems, security, embedded, cloud)
+   when the extracted skills contain no tech skill. It would move 10 out (in scope 113 → 103 board + 6 pasted);
+   debatable moves: CloudSEK "Security Consultant Intern" and "Technical Security Consultant", Stable Money "AI
+   Product Builder" (no tech skills extracted); it misses "Training Content Developer". Not applied.
+
 ## Not started: P6, P7.
