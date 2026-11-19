@@ -432,4 +432,28 @@ proposal: add it as an anonymized `p00` (no name) before drafting.
    Note for review: some draft reasons claim facts the posting does not state (e.g. "batch 2027 eligible" for the
    HackerRank SDE intern, where no batch was extracted) — the tool shows the evidence next to the draft.
 
+## Session 9 (2026-11-19) — review-tool investigation (no label changes)
+
+- **Pairs in pool v4 whose job has no job_facts row: 0.** All 57 distinct jobs (134 pairs) have facts
+  (113 on facts_v3, the pasted ones on facts_v4). Coinbase "Machine Learning Engineer" is job 693, facts_v3.
+- **Root cause of "no extracted facts available":** `.env` has `DATABASE_URL=…@localhost:5432/joblens` (the system
+  Postgres 17), not the dev DB (127.0.0.1:54329). The tool's lookup failed (password authentication failed for
+  "joblens") and it silently fell back to the short pool summary — for every pair in that session.
+- **Coinbase p15 draft ("Requires 2+ years experience") is supported by the posting:** "2+ years of professional
+  experience in machine learning and software engineering, with experience shipping production-grade ML services."
+  (under "Required Skills and Experience"). The drafter saw the pool summary, whose "Eligibility: 2+ years
+  experience" line came from that extracted quote. The posting also says "IC4" (a level signal the seniority rule
+  does not read from the posting text).
+- **What the drafter sees:** for every pair, `title | company | location` + the first 420 characters of the pool
+  summary (structured text built from the job's facts + the first 400 characters of the posting). No pair was
+  drafted without facts, so no draft was marked `low_confidence`.
+- **Review tool fixed:** reports which DB it reached and **stops** if job facts/text cannot be read (unless
+  `--allow-no-db`); warns "NO EXTRACTED FACTS" and shows the first 1,500 characters of the raw posting when facts
+  are missing; shows every posting line mentioning years/experience for every pair; records `shown` (facts /
+  raw_posting / summary_only) in each reviewed row. 4 tests.
+- **Extraction proposal:** not needed — no in-pool job is unextracted (0 Gemini calls).
+- **Your 24 reviewed p00 labels** all point to jobs that have facts, but all 24 were made on the summary-only view
+  (DB unreachable). Worth re-checking with the fixed tool; 2 differ from the draft (Sarvam Embedded Data Scientist
+  1 → 2, Zscaler Java 1 → 0).
+
 ## Not started: P5, P6, P7.
