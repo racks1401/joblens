@@ -282,4 +282,39 @@ Of 847 drafted pairs: **139 still valid** (job active and in scope), 677 now out
 drafted 0s but only 1 of the 16 drafted 2s. Valid pairs by relevance: 15 × 2, 71 × 1, 53 × 0. A rebuilt
 in-scope pool would have 786 pairs; all 139 are in it, so 647 would need new drafts. Waiting for your go-ahead.
 
+## Session 4 (2026-11-19)
+
+### Role-family filter ✔ (rule-based, no LLM)
+`app/ingest/role_family.py` + migration 0004: `jobs.role_family` ∈ engineering | data_ml | product | design | other
+(+ `role_reason`), from title keywords; for generic titles (Intern, Associate, Graduate, Trainee) the extracted
+required skills break the tie unless the title has a non-tech word (marketing, sales, talent, ...). Customer-facing
+"engineer" titles (sales/solutions/support/field/customer engineer) count as other. Set at ingestion (title) and
+refined after extraction (title + skills). `in_scope` now = fresher-relevant AND open to India AND family in
+(engineering, data_ml, product); all jobs stay in the DB; only in-target jobs are added at ingestion.
+- Active jobs by family (1,249): other 733, engineering 341, data_ml 105, product 53, design 17.
+- In scope before new boards: **117** (91 engineering, 23 data_ml, 3 product) — under 150, so:
+- Round 3 boards: 113 tokens probed (incl. tokens seen in real public posting URLs via web search), 23 HTTP 200,
+  14 kept with >= 1 tech fresher India/remote job → 124 boards. Re-ingest: 38 new, 7 deactivated (removed from boards).
+- **In scope now: 155** (118 engineering, 29 data_ml, 8 product); 109 India locations, 46 open remote;
+  **12 internships, 2 new-grad/entry titles**. All 155 extracted on Gemini (38 new: 38/38 valid on the first
+  attempt, 17 evidence drops).
+
+### Review items
+- Profile (dev DB id in `data/private/profile_saved.json`): degree MCA (AI & IoT), graduation 2027, CGPA 7.96,
+  experience 0, 27 skills — all from the resume via Groq gpt-oss-20b (real LLM). target_roles, preferred_locations,
+  work_modes, employment_types are provisional (spec 11.2 example); min pay unset.
+- Live `/matches` top 10 (dev DB, real stack: fastembed query embedding, Gemini facts, rule-based eligibility;
+  no fake client): all 10 in scope, all CHECK (degree/CGPA/batch mostly unstated), 4 are intern/graduate roles.
+  Trust level is "not computed" for all — P5 (trust) is not built yet. A first attempt hit a stale API process
+  from this morning still bound to port 8011 (old code, no filters); that output was discarded and the process stopped.
+- Cap fix (live jobs wrongly marked inactive): **done** in 46fd8fc — deactivation uses the full board listing;
+  later changed so the cap counts only in-target jobs. Every re-ingest since has deactivated only jobs removed
+  from their boards (7, 0, 7).
+
+### Redraft estimate (not started — waiting for confirmation)
+5 profiles (yours + p05 ML intern, p09 full-stack, p10 data engineer, p15 GenAI), in-scope pool, top-10 per method
+(M1–M5): 130 pairs, 26 reusable from existing drafts → **104 pairs to draft = 10–13 qwen calls at 10–15 jobs per
+call, ~19K tokens** (~187 tokens/pair measured). Your profile is not in the committed `evals/data/profiles.jsonl`;
+proposal: add it as an anonymized `p00` (no name) before drafting.
+
 ## Not started: P5, P6, P7.
