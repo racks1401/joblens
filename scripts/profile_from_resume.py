@@ -24,7 +24,7 @@ def main() -> None:
     ap.add_argument("--out", default="data/private/profile_draft.json")
     args = ap.parse_args()
     text = pdf_to_text(Path(args.pdf).read_bytes())
-    llm = get_llm("extract")
+    llm = get_llm("profile")
     draft = extract_profile(text, llm)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

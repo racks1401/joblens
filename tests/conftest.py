@@ -23,6 +23,7 @@ os.environ.update(
         "LLM_PROVIDER": "fake",
         "LLM_API_KEY": "",
         "JUDGE_API_KEY": "",
+        "GEMINI_API_KEY": "",
         "EMBEDDER": "fake",
         "DATABASE_URL": TEST_DB,
         "ADMIN_API_KEY": "test-admin-key",

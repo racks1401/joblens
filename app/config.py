@@ -26,6 +26,8 @@ class EnvSettings(BaseSettings):
     llm_provider: str = "auto"  # auto | openai | fake
     judge_api_key: str = ""
     judge_base_url: str = ""
+    gemini_api_key: str = ""
+    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
     database_url: str = "postgresql+psycopg://joblens:joblens@localhost:5432/joblens"
     admin_api_key: str = ""
     settings_file: str = str(ROOT / "config" / "settings.yaml")
@@ -45,6 +47,15 @@ class ModelsCfg(BaseModel):
     explain: str
     agent: str
     judge: str
+    profile: str = "openai/gpt-oss-20b"
+
+
+class ProviderCfg(BaseModel):
+    """One OpenAI-compatible endpoint. Each provider gets its own rate limiter."""
+
+    tpm_limit: int = 0
+    rpm_limit: int = 0
+    model_params: dict[str, dict[str, Any]] = {}
 
 
 class PromptsCfg(BaseModel):
@@ -126,6 +137,8 @@ class YamlSettings(BaseModel):
     """Typed view of config/settings.yaml."""
 
     models: ModelsCfg
+    providers: dict[str, ProviderCfg] = {}
+    role_providers: dict[str, str] = {}  # role -> provider name (default groq)
     prompts: PromptsCfg = PromptsCfg()
     llm: LLMCfg = LLMCfg()
     embeddings: EmbeddingsCfg
@@ -150,6 +163,16 @@ class Settings(BaseModel):
         if p in ("openai", "fake"):
             return p
         return "openai" if self.env.llm_api_key else "fake"
+
+    def provider_for(self, role: str) -> str:
+        """Provider name for a role (extract | profile | explain | agent | judge)."""
+        return self.cfg.role_providers.get(role, "groq")
+
+    def provider_endpoint(self, provider: str) -> tuple[str, str]:
+        """(base_url, api_key) for a provider. Keys come only from the environment / .env."""
+        if provider == "gemini":
+            return self.env.gemini_base_url, self.env.gemini_api_key
+        return self.env.llm_base_url, self.env.llm_api_key
 
 
 def expand_env(text: str, environ: dict[str, str] | None = None) -> str:

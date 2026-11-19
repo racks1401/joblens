@@ -172,3 +172,34 @@ def test_json_validate_failed_becomes_invalid_attempt(monkeypatch: pytest.Monkey
     prov, _ = _provider(monkeypatch, [err])
     r = prov.complete(model="m", messages=[], temperature=0, json_mode=True, tools=None, task="t")
     assert r.content == "{oops"
+
+
+def test_rpm_limit_and_gemini_daily_quota(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.llm.client import DailyLimitReached, TokenPacer
+
+    t = [0.0]
+    slept: list[float] = []
+
+    def sleep(d: float) -> None:
+        slept.append(d)
+        t[0] += d
+
+    p = TokenPacer(0, clock=lambda: t[0], sleep=sleep, rpm=2)
+    for _ in range(2):
+        p.wait(10)
+        p.record(10)
+    p.wait(10)  # third request in the same minute waits for the window
+    assert slept == [60.0]
+
+    prov, _ = _provider(monkeypatch, [_rate_error(
+        "Quota exceeded for metric: generate_content_free_tier_requests, quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier")])
+    with pytest.raises(DailyLimitReached):
+        prov.complete(model="m", messages=[], temperature=0, json_mode=True, tools=None, task="t")
+
+
+def test_roles_map_to_providers(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.config import get_settings
+
+    s = get_settings()
+    assert s.provider_for("extract") == "gemini" and s.provider_for("profile") == "groq"
+    assert s.provider_for("judge") == "groq" and s.provider_endpoint("gemini")[0].startswith("https://generativelanguage")

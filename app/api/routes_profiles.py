@@ -66,7 +66,7 @@ def profile_from_resume(file: UploadFile = File(...)) -> DraftOut:
     except (PdfReadError, ValueError) as e:
         raise APIError(400, "invalid_pdf", f"Could not read PDF: {type(e).__name__}") from e
     try:
-        draft = extract_profile(text, get_llm("extract"))
+        draft = extract_profile(text, get_llm("profile"))
     except ResumeTextTooShort as e:
         raise APIError(422, "resume_text_too_short", str(e)) from e
     return DraftOut(draft=draft, resume_text=text)

@@ -1,12 +1,21 @@
 # Weights, thresholds, models and prompt versions. Secrets live in .env.
 # ${VAR:-default} is replaced from the environment.
-# Defaults chosen from Groq's live model list on 2026-11-19 (scripts/list_models.py). Llama models
-# are no longer offered there. Judge/draft labels use a different family (Qwen) from the pipeline (gpt-oss).
+# Defaults chosen from the providers' live model lists on 2026-11-19 (scripts/list_models.py [--provider gemini]).
+# Extraction runs on Gemini; resume parsing, explanations, agent, judge and draft labels on Groq.
+# Judge/draft labels use a different family (Qwen) from the pipeline models (Gemini, gpt-oss).
 models:
-  extract: ${EXTRACT_MODEL:-openai/gpt-oss-20b}
+  extract: ${EXTRACT_MODEL:-gemini-3.5-flash-lite}
+  profile: ${PROFILE_MODEL:-openai/gpt-oss-20b}
   explain: ${EXPLAIN_MODEL:-openai/gpt-oss-20b}
   agent: ${AGENT_MODEL:-openai/gpt-oss-120b}
   judge: ${JUDGE_MODEL:-qwen/qwen3.8-27b}   # different model family from explain
+role_providers: {extract: gemini, profile: groq, explain: groq, agent: groq, judge: groq}
+providers:
+  groq:
+    tpm_limit: 8000               # measured: 8,000 tokens/min, 1,000 requests/day, 200K tokens/day per model
+  gemini:
+    rpm_limit: 10                 # no rate-limit headers; conservative free-tier pacing, 429s are retried
+    tpm_limit: 200000
 prompts: {facts: facts_v1, profile: profile_v1, explain: explain_v1, judge: judge_v1, agent: agent_v1}
 llm:
   timeout_s: 60

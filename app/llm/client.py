@@ -112,19 +112,22 @@ class DailyLimitReached(RuntimeError):
 class TokenPacer:
     """Sliding 60 s window of tokens sent, to stay under a provider tokens-per-minute limit."""
 
-    def __init__(self, tpm: int, clock: Any = time.monotonic, sleep: Any = time.sleep) -> None:
-        self.tpm, self.clock, self.sleep = tpm, clock, sleep
+    def __init__(self, tpm: int, clock: Any = time.monotonic, sleep: Any = time.sleep, rpm: int = 0) -> None:
+        self.tpm, self.rpm, self.clock, self.sleep = tpm, rpm, clock, sleep
         self.events: list[tuple[float, int]] = []
 
     def wait(self, tokens: int) -> None:
-        if self.tpm <= 0:
+        """Block until one more request of `tokens` fits both the tokens/min and requests/min limits."""
+        if self.tpm <= 0 and self.rpm <= 0:
             return
-        tokens = min(tokens, self.tpm)
+        tokens = min(tokens, self.tpm) if self.tpm > 0 else tokens
         while True:
             now = self.clock()
             self.events = [(t, n) for t, n in self.events if now - t < 60]
             used = sum(n for _, n in self.events)
-            if used + tokens <= self.tpm:
+            tok_ok = self.tpm <= 0 or used + tokens <= self.tpm
+            req_ok = self.rpm <= 0 or len(self.events) < self.rpm
+            if tok_ok and req_ok:
                 return
             self.sleep(max(0.5, 60 - (now - self.events[0][0])))
 
@@ -135,10 +138,10 @@ class TokenPacer:
 _PACERS: dict[str, TokenPacer] = {}
 
 
-def shared_pacer(base_url: str, tpm: int) -> TokenPacer:
-    """One pacer per provider endpoint: the limit is per account, not per client."""
+def shared_pacer(base_url: str, tpm: int, rpm: int = 0) -> TokenPacer:
+    """One pacer per provider endpoint (separate limiters for Groq and Gemini)."""
     if base_url not in _PACERS:
-        _PACERS[base_url] = TokenPacer(tpm)
+        _PACERS[base_url] = TokenPacer(tpm, rpm=rpm)
     return _PACERS[base_url]
 
 
@@ -165,11 +168,12 @@ class OpenAIProvider:
 
     def __init__(self, api_key: str, base_url: str, timeout_s: float = 60, max_retries: int = 2,
                  tpm: int = 0, model_params: dict[str, dict[str, Any]] | None = None,
-                 rate_limit_retries: int = 8) -> None:
+                 rate_limit_retries: int = 8, rpm: int = 0, name: str = "openai") -> None:
         from openai import OpenAI
 
         self.client = OpenAI(api_key=api_key, base_url=base_url or None, timeout=timeout_s, max_retries=max_retries)
-        self.pacer = shared_pacer(base_url, tpm)
+        self.pacer = shared_pacer(base_url, tpm, rpm)
+        self.name = name
         self.model_params = model_params or {}
         self.rate_limit_retries = rate_limit_retries
 
@@ -193,7 +197,8 @@ class OpenAIProvider:
                                           json_mode=json_mode, tools=tools)
             except RateLimitError as e:
                 body = str(getattr(e, "message", "") or e)
-                if re.search(r"per day|\bTPD\b|\bRPD\b|daily", body, re.I):
+                # Groq: "tokens per day (TPD)"; Gemini: quota ids like "...RequestsPerDayPerProjectPerModel..."
+                if re.search(r"per ?day|per_day|\bTPD\b|\bRPD\b|daily", body, re.I):
                     raise DailyLimitReached(body[:300]) from e
                 self.pacer.record(est)
                 delay = _retry_after(getattr(e.response, "headers", None)) + 1
@@ -351,9 +356,10 @@ class LLMClient:
 
 
 def get_llm(role: str = "extract", cache: CacheStore | None = None) -> LLMClient:
-    """Build the client for a role (extract | explain | agent | judge) from settings.
+    """Build the client for a role (extract | profile | explain | agent | judge) from settings.
 
-    Falls back to the offline FakeProvider when no API key is configured.
+    The role's provider comes from settings `role_providers` (Groq by default; extraction on Gemini).
+    Each provider has its own rate limiter. Falls back to the offline FakeProvider when no key is configured.
     """
     from app.config import get_settings
     from app.llm.fake import FakeProvider
@@ -370,11 +376,18 @@ def get_llm(role: str = "extract", cache: CacheStore | None = None) -> LLMClient
     if s.llm_provider == "fake":
         # Never persist fake outputs: the key would not change when the heuristic code changes.
         return LLMClient(FakeProvider(), "fake-heuristic", MemoryCache(), s.cfg.budget.daily_tokens)
-    key, base = s.env.llm_api_key, s.env.llm_base_url
+    pname = s.provider_for(role)
+    base, key = s.provider_endpoint(pname)
     if role == "judge" and s.env.judge_api_key:
         key, base = s.env.judge_api_key, s.env.judge_base_url or base
-    prov = OpenAIProvider(key, base, s.cfg.llm.timeout_s, s.cfg.llm.max_retries, tpm=s.cfg.llm.tpm_limit,
-                          model_params=s.cfg.llm.model_params)
+    if not key:
+        raise RuntimeError(f"No API key for provider {pname!r} (role {role!r}); set it in .env")
+    pc = s.cfg.providers.get(pname)
+    tpm = pc.tpm_limit if pc else s.cfg.llm.tpm_limit
+    rpm = pc.rpm_limit if pc else 0
+    params = {**s.cfg.llm.model_params, **(pc.model_params if pc else {})}
+    prov = OpenAIProvider(key, base, s.cfg.llm.timeout_s, s.cfg.llm.max_retries, tpm=tpm, rpm=rpm,
+                          model_params=params, name=pname)
     return LLMClient(prov, model, cache, s.cfg.budget.daily_tokens)
 
 
