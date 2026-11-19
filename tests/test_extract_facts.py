@@ -191,7 +191,7 @@ def test_paste_title_comes_from_extracted_role(session) -> None:  # type: ignore
     from app.ingest.store import upsert_job
     from app.models import Job
 
-    row, _ = upsert_job(session, from_paste("Company: Acme\n\nHello world, we build things.\nPython and SQL needed."),
+    row, _ = upsert_job(session, from_paste("Company: Acme\n\nWe are hiring a Backend Engineer Intern.\nPython and SQL needed."),
                         datetime.now(UTC))
     session.commit()
     assert not job_posting_text(row).startswith("Title:")  # the guess is not shown to the extractor
@@ -208,3 +208,23 @@ def test_facts_v3_is_v1_plus_two_rules() -> None:
     assert "NOT batch years" in v3 and '["all"]' in v3 and "NOT batch years" not in v1
     msgs = build_messages("facts_v3", json_schema="{}", job_text="POSTING")
     assert "POSTING" in msgs[1]["content"]
+
+
+@pytest.mark.db
+def test_paste_title_must_be_in_posting_and_paste_stays_in_scope(session) -> None:  # type: ignore[no-untyped-def]
+    from datetime import UTC, datetime
+
+    from app.extract.facts import process_jobs
+    from app.ingest.paste import from_paste
+    from app.ingest.store import upsert_job
+    from app.models import Job
+
+    row, _ = upsert_job(session, from_paste("Company: Acme\n\nWHO CAN APPLY\n* Degrees: B.Tech\n* Stipend: INR 20,000"),
+                        datetime.now(UTC))
+    session.commit()
+    llm = fake_llm({"facts": lambda m, t: LLMResult(content=json.dumps({"title": "Acme Hiring Drive"}))})  # invented
+    process_jobs(session, [row.id], llm=llm)
+    session.expire_all()
+    job = session.get(Job, row.id)
+    assert job.title == "Title unknown" and job.role_family == "other"
+    assert job.in_scope is True  # pasted jobs skip the role-family filter

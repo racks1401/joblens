@@ -24,6 +24,9 @@ from app.schemas import EVIDENCED_FIELDS, Evidenced, JobFacts, Money
 
 log = logging.getLogger("joblens.extract")
 MAX_RETRIES = 2
+# Pasted-job title flags (the title text is the flag; the API exposes them as JobOut.flags).
+TITLE_UNKNOWN = "Title unknown"
+NEEDS_HUMAN_TITLE = "Needs human title"
 LIST_FIELDS = {"locations", "degrees_allowed", "specializations", "graduation_years", "required_skills",
                "nice_to_have_skills"}
 _ENUM_ALIASES = {
@@ -263,8 +266,10 @@ def process_jobs(s: Session, job_ids: Sequence[int], llm: LLMClient | None = Non
         from app.ingest.role_family import classify_role
         from app.ingest.seniority import classify
 
-        if job.source == "paste" and r.valid and r.facts.title and r.facts.title.strip():
-            job.title = r.facts.title.strip()[:200]  # the role as extracted from the posting
+        if job.source == "paste" and job.title != NEEDS_HUMAN_TITLE:
+            # Accept the extracted role only if it is written in the posting; never invent a title.
+            t = (r.facts.title or "").strip() if r.valid else ""
+            job.title = t[:200] if t and norm_for_match(t) in norm_for_match(job.description_text) else TITLE_UNKNOWN
             job.is_fresher_relevant, job.seniority_reason = classify(job.title, job.description_text)
         job.role_family, job.role_reason = classify_role(job.title, r.facts.required_skills.value)
         from app.ingest.seniority import apply_extracted_experience

@@ -199,3 +199,4 @@ class JobOut(BaseModel):
     facts: dict[str, Any] | None = None
     facts_valid: bool | None = None
     trust: TrustResult | None = None
+    flags: list[str] = []  # e.g. "title unknown", "needs human title" (pasted jobs)

@@ -31,6 +31,7 @@ def job_out(s: Session, job: Job, include_text: bool = True) -> JobOut:
         facts=facts.facts if facts else None, facts_valid=facts.valid if facts else None,
         trust=TrustResult(score=trust.score, level=trust.level, reasons=trust.reasons, scam_prob=trust.scam_prob)  # type: ignore[arg-type]
         if trust else None,
+        flags=[job.title.lower()] if job.title in ("Title unknown", "Needs human title") else [],
     )
 
 

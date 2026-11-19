@@ -33,6 +33,12 @@ def client(sf) -> TestClient:  # type: ignore[no-untyped-def]
     for i, t in enumerate(JOBS):
         r = c.post("/jobs/paste", json={"text": t, "url": f"https://jobs.example.test/{i}", "company": t.split("Company: ")[1].split("\n")[0]})
         assert r.status_code == 200, r.text
+    # Pasted jobs are always in scope; these tests exercise the ATS filters, so treat the rows as board jobs.
+    with sf() as s:
+        from sqlalchemy import text
+
+        s.execute(text("UPDATE jobs SET source = 'lever'"))
+        s.commit()
     return c
 
 

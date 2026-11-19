@@ -55,7 +55,8 @@ class Job(Base):
     role_family: Mapped[str] = mapped_column(Text, server_default="other", default="other")
     role_reason: Mapped[str | None] = mapped_column(Text)
     in_scope: Mapped[bool] = mapped_column(Boolean, Computed(
-        "is_fresher_relevant AND is_india_eligible AND role_family IN ('engineering', 'data_ml', 'product')",
+        "source = 'paste' OR (is_fresher_relevant AND is_india_eligible"
+        " AND role_family IN ('engineering', 'data_ml', 'product'))",
         persisted=True))
     fts: Mapped[Any] = mapped_column(
         TSVECTOR,
