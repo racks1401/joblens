@@ -54,6 +54,23 @@ def _run_tool(name: str, args: dict[str, Any], ctx: ToolContext, timeout_s: floa
     return res
 
 
+def tool_use_feedback(e: Exception) -> dict[str, Any] | None:
+    """Groq 'tool_use_failed' 400 -> {tool, args, error, raw}; None for any other bad request."""
+    body = getattr(e, "body", None)
+    err = body.get("error", body) if isinstance(body, dict) else None
+    if not isinstance(err, dict) or err.get("code") != "tool_use_failed":
+        return None
+    raw = str(err.get("failed_generation") or "")
+    try:
+        g = json.loads(raw)
+        name, args = str(g.get("name") or "unknown"), g.get("arguments") or {}
+    except (json.JSONDecodeError, AttributeError):
+        name, args = "unknown", {}
+    msg = str(err.get("message") or "")
+    return {"tool": name, "args": args if isinstance(args, dict) else {}, "raw": raw,
+            "error": msg.split("errors:", 1)[-1].strip()[:400] or msg[:400]}
+
+
 def run_turn(s: Session, profile_id: uuid.UUID, profile: Profile, message: str, session_id: uuid.UUID | None = None,
              llm: Any = None, explain_llm: Any = None) -> dict[str, Any]:
     from app.llm.client import get_llm
@@ -82,8 +99,21 @@ def run_turn(s: Session, profile_id: uuid.UUID, profile: Profile, message: str, 
         except LIMIT_ERRORS as e:
             stop = f"llm_limit: {type(e).__name__}: {str(e)[:160]}"
             break
+        except openai.BadRequestError as e:
+            fb = tool_use_feedback(e)
+            if fb is None:
+                stop = f"llm_error: {type(e).__name__}: {str(e)[:700]}"
+                break
+            # Provider-side schema check rejected the tool call: give the error back to the model (spec 14.2).
+            llm_calls += 1
+            trace.append({"step": step, "tool": fb["tool"], "args": fb["args"], "ms": 0.0, "result_chars": 0,
+                          "error": "provider rejected arguments", "output": {"error": fb["error"]}})
+            messages.append({"role": "assistant", "content": f"(invalid tool call: {fb['raw'][:400]})"})
+            messages.append({"role": "user", "content": f"That tool call was rejected: {fb['error']}. "
+                                                        "Fix the arguments and call the tool again."})
+            continue
         except (openai.APIError, cf.TimeoutError) as e:
-            stop = f"llm_error: {type(e).__name__}: {str(e)[:160]}"
+            stop = f"llm_error: {type(e).__name__}: {str(e)[:700]}"
             break
         llm_calls += 1
         ctx.tokens["in"] += res.tokens_in
@@ -106,7 +136,9 @@ def run_turn(s: Session, profile_id: uuid.UUID, profile: Profile, message: str, 
     if answer is None:
         answer = ("I could not finish this request: " + (stop or "unknown stop") +
                   ". Nothing below is a recommendation; please try again later.")
-    grounding = check_answer(answer, outputs)
+    pnums = {float(x) for x in (profile.cgpa, profile.graduation_year, profile.experience_years,
+                                profile.min_monthly_pay_inr) if x is not None}
+    grounding = check_answer(answer, outputs, pnums)
     mem.save_message(s, cs.id, "assistant", {"text": answer, "tool_trace": [{k: v for k, v in t.items() if k != "output"}
                                                                           for t in trace],
                                              "grounding": grounding.to_dict(), "stop": stop})

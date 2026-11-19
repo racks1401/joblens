@@ -118,6 +118,23 @@ def test_chat_search_eligibility_remember_and_memory_routes(client) -> None:  # 
     assert client.get(f"/matches/{pid}/{job['id']}/explain").json().get("cached") is True
 
 
+@pytest.mark.db
+def test_search_name_matches_and_check_rules(client, session) -> None:  # type: ignore[no-untyped-def]
+    from app.agent.tools import JobIdArgs, check_job_eligibility, search_jobs
+
+    job = client.post("/jobs/paste", json={"text": PASTE}).json()
+    pid, p = _profile(session)
+    ctx = ToolContext(session=session, profile_id=pid, profile=p, memory={})
+    out = search_jobs(ctx, SearchJobsArgs(query="zzz Example"))
+    ids = [r["job_id"] for r in out["results"]] + [r["job_id"] for r in out["name_matches"] or []]
+    assert job["id"] in ids
+    assert search_jobs(ToolContext(session=session, profile_id=pid, profile=p,
+                                   memory={"avoid_companies": ["example analytics"]}),
+                       SearchJobsArgs(query="zzz Example"))["name_matches"] is None
+    e = check_job_eligibility(ctx, JobIdArgs(job_id=job["id"]))
+    assert e["verdict"] in ("ELIGIBLE", "CHECK", "INELIGIBLE") and "needs_checking" in e
+
+
 class _Scripted:
     """Provider returning scripted results; raises if the script item is an exception."""
 
@@ -176,3 +193,39 @@ def test_ungrounded_answer_is_flagged_in_turn(session) -> None:  # type: ignore[
                     MemoryCache())
     r = run_turn(session, pid, p, "best jobs?", llm=llm)
     assert not r["grounding"]["ok"] and r["grounding"]["unsupported_job_ids"] == [77]
+
+
+# ---------- fixes after the first real run ----------
+
+def test_digits_in_links_are_not_job_ids() -> None:
+    ans = ("TLDP, Johnson & Johnson (job_id: 1303) - [Apply](https://x.greenhouse.io/jobs/7723230003) "
+           "https://stripe.com/jobs/search?gh_jid=8130876")
+    g = check_answer(ans, OUT)
+    assert g.ok and g.job_ids_checked == [1303], g.to_dict()
+
+
+def test_graduation_year_near_cgpa_not_cgpa_and_profile_values_labeled() -> None:
+    g = check_answer("Your MCA (graduating 2027, CGPA 8.41) fits job_id: 1303.", OUT, {2027.0, 8.41})
+    kinds = {u["value"]: (u["kind"], u["in_profile"]) for u in g.unsupported_numbers}
+    assert kinds["2027"] == ("other", True) and kinds["8.41"] == ("cgpa", True)
+    assert not g.ok and g.only_profile_values_flagged
+
+
+def test_filters_accept_hyphenated_values() -> None:
+    from app.agent.tools import SearchFilters
+
+    assert SearchFilters(employment_type="Full-time", work_mode="on-site").model_dump()["employment_type"] == "full_time"
+    with pytest.raises(ValueError):
+        SearchFilters(employment_type="freelance")
+
+
+def test_provider_tool_use_failed_is_fed_back() -> None:
+    from app.agent.loop import tool_use_feedback
+
+    class E(Exception):
+        body = {"error": {"code": "tool_use_failed", "message": "Tool call validation failed: errors: [`/query`: minLength]",
+                          "failed_generation": '{"name": "search_jobs", "arguments": {"query": ""}}'}}
+
+    fb = tool_use_feedback(E())
+    assert fb and fb["tool"] == "search_jobs" and "minLength" in fb["error"]
+    assert tool_use_feedback(Exception("x")) is None

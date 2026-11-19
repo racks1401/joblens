@@ -6,12 +6,13 @@ from stored data: unknown values stay null and eligibility verdicts are passed t
 from __future__ import annotations
 
 import json
+import re
 import time
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
@@ -20,14 +21,30 @@ from app.eligibility import check_eligibility, monthly_inr
 from app.models import Job, JobFactsRow, TrustScore, UserMemory
 from app.schemas import JobFacts, Profile
 
+EMPLOYMENT = ("internship", "full_time", "part_time", "contract")
+WORK_MODES = ("onsite", "remote", "hybrid")
+
 
 class SearchFilters(BaseModel):
-    employment_type: Literal["internship", "full_time", "part_time", "contract"] | None = None
-    work_mode: Literal["onsite", "remote", "hybrid"] | None = None
+    # Plain strings (not enums) so a provider-side schema check accepts "full-time"; normalized below.
+    employment_type: str | None = Field(default=None, description="internship | full_time | part_time | contract")
+    work_mode: str | None = Field(default=None, description="onsite | remote | hybrid")
     location: str | None = None
     min_monthly_pay_inr: int | None = None
     fresher_only: bool = False
     eligible_only: bool = False
+
+    @field_validator("employment_type", "work_mode", mode="before")
+    @classmethod
+    def _norm(cls, v: Any, info: Any) -> Any:
+        if v in (None, ""):
+            return None
+        x = re.sub(r"[\s-]+", "_", str(v).strip().lower()).replace("on_site", "onsite")
+        x = {"fulltime": "full_time", "intern": "internship", "parttime": "part_time"}.get(x, x)
+        allowed = EMPLOYMENT if info.field_name == "employment_type" else WORK_MODES
+        if x not in allowed:
+            raise ValueError(f"must be one of {', '.join(allowed)}")
+        return x
 
 
 class SearchJobsArgs(BaseModel):
@@ -153,18 +170,52 @@ def job_card(job: Job, f: JobFacts | None, t: TrustScore | None) -> dict[str, An
     }
 
 
+NAME_STOP = {"job", "jobs", "role", "roles", "intern", "internship", "internships", "engineer", "engineering",
+             "software", "developer", "for", "the", "and", "any", "with", "full", "time", "remote", "fresher",
+             "freshers", "graduate", "data", "analyst", "india", "show", "find", "best", "me", "my", "a"}
+
+
+def name_matches(s: Session, query: str, exclude: list[str], limit: int = 3) -> list[Job]:
+    """In-scope active jobs whose company or title contains a distinctive query word (e.g. 'TLDP', 'Elip').
+
+    Hybrid search ANDs keyword terms, so a short name query like "JNJ TLDP" can miss the job it names."""
+    from sqlalchemy import or_
+
+    words = [w for w in re.findall(r"[A-Za-z][A-Za-z0-9&.+-]{2,}", query) if w.lower() not in NAME_STOP][:4]
+    if not words:
+        return []
+    conds = [c for w in words for c in (Job.company.ilike(f"%{w}%"), Job.title.op("~*")(rf"\m{re.escape(w)}\M"))]
+    q = select(Job).where(Job.is_active.is_(True), Job.in_scope.is_(True), or_(*conds)).order_by(Job.id).limit(limit * 3)
+    rows = _drop_excluded(list(s.execute(q).scalars().all()), exclude)
+    return rows[:limit]
+
+
+def _drop_excluded(jobs: list[Job], exclude: list[str]) -> list[Job]:
+    ex = [e.lower() for e in exclude]
+    return [j for j in jobs if not any(e in (j.company or "").lower() for e in ex)]
+
+
 def search_jobs(ctx: ToolContext, a: SearchJobsArgs) -> dict[str, Any]:
     from app.search.service import Filters, search
 
     avoid = [str(c) for c in ctx.memory.get("avoid_companies") or []]
     flt = Filters(**a.filters.model_dump(), exclude_companies=avoid)
     res = search(ctx.session, a.query, "hybrid", limit=a.limit, filters=flt, profile=ctx.profile)
-    return {"results": [{"job_id": r.job_id, "title": r.title, "company": r.company or None,
-                         "location": r.location_raw, "final_score": r.final_score,
-                         "eligibility": r.eligibility.verdict if r.eligibility else None,
-                         "trust_level": r.trust.level if r.trust else None, "url": r.url}
-                        for r in res["results"]],
-            "excluded_companies": avoid or None}
+    rows = [{"job_id": r.job_id, "title": r.title, "company": r.company or None,
+             "location": r.location_raw, "final_score": r.final_score,
+             "eligibility": r.eligibility.verdict if r.eligibility else None,
+             "trust_level": r.trust.level if r.trust else None, "url": r.url}
+            for r in res["results"]]
+    seen = {r["job_id"] for r in rows}
+    names = []
+    for j in name_matches(ctx.session, a.query, avoid):
+        if j.id in seen:
+            continue
+        _, f, t = _load(ctx.session, j.id)
+        e = check_eligibility(ctx.profile, f or JobFacts(title=j.title))
+        names.append({"job_id": j.id, "title": j.title, "company": j.company or None, "location": j.location_raw,
+                      "eligibility": e.verdict, "trust_level": t.level if t else None, "url": j.url})
+    return {"results": rows, "name_matches": names or None, "excluded_companies": avoid or None}
 
 
 def get_job(ctx: ToolContext, a: JobIdArgs) -> dict[str, Any]:
@@ -180,6 +231,8 @@ def check_job_eligibility(ctx: ToolContext, a: JobIdArgs) -> dict[str, Any]:
         return {"error": f"no job with id {a.job_id}"}
     e = check_eligibility(ctx.profile, f or JobFacts(title=job.title))
     return {"job_id": job.id, "title": job.title, "company": job.company or None, "verdict": e.verdict,
+            "needs_checking": [r.rule for r in e.rules if r.status in ("UNKNOWN", "SOFT_FAIL")] or None,
+            "failed": [r.rule for r in e.rules if r.status == "FAIL"] or None,
             "rules": [{"rule": r.rule, "status": r.status, "message": r.message} for r in e.rules]}
 
 
@@ -245,6 +298,7 @@ def execute_tool(name: str, raw_args: dict[str, Any], ctx: ToolContext) -> ToolR
         out = IMPL[name](ctx, args)  # type: ignore[operator]
     except Exception as e:  # noqa: BLE001 - reported to the model, logged in the trace
         out = {"error": f"{type(e).__name__}: {str(e)[:200]}"}
+    out = json.loads(json.dumps(out, default=str))  # JSON-safe (dates -> ISO strings) for the model and the trace
     return ToolResult(name, args.model_dump(), out, (time.perf_counter() - t0) * 1000, out.get("error"))
 
 

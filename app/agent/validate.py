@@ -32,8 +32,9 @@ class Grounding:
     numbers_checked: list[str] = field(default_factory=list)
     skipped_small_numbers: int = 0
     unsupported_job_ids: list[int] = field(default_factory=list)
-    unsupported_numbers: list[dict[str, str]] = field(default_factory=list)
+    unsupported_numbers: list[dict[str, Any]] = field(default_factory=list)
     jobs_named_without_id: list[dict[str, Any]] = field(default_factory=list)
+    only_profile_values_flagged: bool = False  # every flag is the user's own profile value (still a FAIL)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -82,33 +83,29 @@ def _supported(v: float, mult: float, nums: set[float], pay: bool) -> bool:
     cands = {v * mult} if mult != 1 else {v}
     if pay and mult == 1:
         cands |= {v * 1e3, v * 1e5}  # "25" in "₹25k/month" style splits; harmless widening for pay only
-    tol = 0.02 if pay else 0.001
-    return any(abs(c - t) <= tol * max(1.0, abs(t)) for c in cands for t in nums)
+    if pay:  # the model may round pay ("about 27.5k"); 2% relative
+        return any(abs(c - t) <= 0.02 * max(1.0, abs(t)) for c in cands for t in nums)
+    return any(abs(c - t) <= 0.005 for c in cands for t in nums)
 
 
-def check_answer(answer: str, outputs: list[dict[str, Any]]) -> Grounding:
+def check_answer(answer: str, outputs: list[dict[str, Any]], profile_numbers: set[float] | None = None) -> Grounding:
     g = Grounding()
     nums, ids, text, jobs = tool_facts(outputs)
     ans = answer or ""
+    stripped = re.sub(r"https?://\S+|\]\([^)]*\)", lambda m: " " * len(m.group(0)), ans)  # links are not facts
     id_spans: list[tuple[int, int]] = []
-    for m in ID_RX.finditer(ans):
+    for m in ID_RX.finditer(stripped):
         jid = int(next(x for x in m.groups() if x))
         id_spans.append(m.span())
         g.job_ids_checked.append(jid)
         if jid not in ids:
             g.unsupported_job_ids.append(jid)
-    url_ids = {int(x) for x in re.findall(r"/jobs/(\d+)", ans)}
-    for jid in url_ids - set(g.job_ids_checked):
-        g.job_ids_checked.append(jid)
-        if jid not in ids:
-            g.unsupported_job_ids.append(jid)
     date_spans = []
-    for m in DATE_RX.finditer(ans):
+    for m in DATE_RX.finditer(stripped):
         date_spans.append(m.span())
         g.numbers_checked.append(m.group(1))
         if m.group(1) not in text:
             g.unsupported_numbers.append({"value": m.group(1), "kind": "date", "context": ans[max(0, m.start() - 30):m.end() + 10]})
-    stripped = re.sub(r"https?://\S+", lambda m: " " * len(m.group(0)), ans)
     for m in NUM_RX.finditer(stripped):
         s, e = m.span()
         if any(a <= s < b for a, b in id_spans + date_spans):
@@ -124,7 +121,7 @@ def check_answer(answer: str, outputs: list[dict[str, Any]]) -> Grounding:
             kind = "pay"
         elif YEARS_CTX.search(stripped[e:e + 15]):
             kind = "years"
-        elif CGPA_CTX.search(stripped[max(0, s - 15):e + 8]):
+        elif CGPA_CTX.search(stripped[max(0, s - 12):s]) or re.match(r"\s?(/\s?10\b|%)", stripped[e:e + 6]):
             kind = "cgpa"
         elif PAY_CTX.search(ctx):
             kind = "pay"
@@ -139,7 +136,8 @@ def check_answer(answer: str, outputs: list[dict[str, Any]]) -> Grounding:
         else:
             ok = _supported(v, MULT.get(suf, 1), nums, kind == "pay")
         if not ok:
-            g.unsupported_numbers.append({"value": raw, "kind": kind, "context": ans[max(0, s - 30):e + 15].strip()})
+            g.unsupported_numbers.append({"value": raw, "kind": kind, "context": ans[max(0, s - 30):e + 15].strip(),
+                                          "in_profile": any(abs(v - p) < 1e-6 for p in profile_numbers or ())})
     low = ans.lower()
     mentioned = set(g.job_ids_checked)
     for j in jobs:
@@ -147,4 +145,6 @@ def check_answer(answer: str, outputs: list[dict[str, Any]]) -> Grounding:
         if len(t) >= 8 and t in low and j["job_id"] not in mentioned:
             g.jobs_named_without_id.append(j)
     g.ok = not (g.unsupported_job_ids or g.unsupported_numbers or g.jobs_named_without_id)
+    g.only_profile_values_flagged = (not g.ok and not g.unsupported_job_ids and not g.jobs_named_without_id
+                                     and all(u.get("in_profile") for u in g.unsupported_numbers))
     return g
