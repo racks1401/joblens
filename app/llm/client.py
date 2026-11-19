@@ -187,7 +187,7 @@ class OpenAIProvider:
         tools: list[dict[str, Any]] | None,
         task: str,
     ) -> LLMResult:
-        from openai import RateLimitError
+        from openai import APIConnectionError, APITimeoutError, InternalServerError, RateLimitError
 
         est = sum(estimate_tokens(str(m.get("content") or "")) for m in messages) + 600
         for attempt in range(self.rate_limit_retries + 1):
@@ -204,6 +204,15 @@ class OpenAIProvider:
                 delay = _retry_after(getattr(e.response, "headers", None)) + 1
                 log_event(log, "llm_rate_limited", level=logging.WARNING, model=model, attempt=attempt + 1,
                           delay_s=round(delay, 1))
+                if attempt == self.rate_limit_retries:
+                    raise
+                self.pacer.sleep(delay)
+                continue
+            except (InternalServerError, APITimeoutError, APIConnectionError) as e:
+                # Provider overload (e.g. Gemini 503 "high demand") or network: back off 15, 30, 60, 60, ... s.
+                delay = min(60.0, 15.0 * 2 ** attempt)
+                log_event(log, "llm_unavailable", level=logging.WARNING, model=model, attempt=attempt + 1,
+                          error=type(e).__name__, delay_s=delay)
                 if attempt == self.rate_limit_retries:
                     raise
                 self.pacer.sleep(delay)

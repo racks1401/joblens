@@ -210,3 +210,37 @@ def test_provider_for_model() -> None:
 
     assert provider_for_model("gemini-3.5-flash-lite") == "gemini"
     assert provider_for_model("openai/gpt-oss-20b") == "groq" and provider_for_model("qwen/qwen3.8-27b") == "groq"
+
+
+def test_503_backs_off_then_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx
+    from openai import InternalServerError
+
+    err = InternalServerError("busy", response=httpx.Response(503, request=httpx.Request("POST", "http://x")),
+                              body=[{"error": {"code": 503, "message": "high demand"}}])
+    prov, slept = _provider(monkeypatch, [err, err, "ok"])
+    r = prov.complete(model="m", messages=[], temperature=0, json_mode=True, tools=None, task="t")
+    assert r.content == "{}" and slept == [15.0, 30.0]
+
+
+@pytest.mark.db
+def test_one_failing_job_does_not_stop_extraction(session) -> None:  # type: ignore[no-untyped-def]
+    from datetime import UTC, datetime
+
+    from app.extract.facts import process_jobs
+    from app.ingest.paste import from_paste
+    from app.ingest.store import upsert_job
+
+    a, _ = upsert_job(session, from_paste("Role: Python Intern\nPython and SQL internship in Pune.", "https://x.test/a"), datetime.now(UTC))
+    b, _ = upsert_job(session, from_paste("Role: Data Intern\nExcel and SQL internship in Pune.", "https://x.test/b"), datetime.now(UTC))
+    session.commit()
+    calls = {"n": 0}
+
+    def flaky(messages: Any, tools: Any) -> LLMResult:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("provider exploded")
+        return LLMResult(content=json.dumps({"title": "Data Intern"}))
+
+    out = process_jobs(session, [a.id, b.id], llm=LLMClient(FakeProvider({"facts": flaky}), "fake", MemoryCache()))
+    assert out["errors"] == 1 and out["valid"] == 1

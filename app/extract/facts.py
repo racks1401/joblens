@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.extract.prompting import build_messages
 from app.extract.vocab import norm_degree, norm_location, norm_skill, norm_specialization
-from app.llm.client import LLMClient, LLMJSONError
+from app.llm.client import DailyLimitReached, LLMClient, LLMJSONError
 from app.logs import log_event
 from app.models import Job, JobFactsRow
 from app.schemas import EVIDENCED_FIELDS, Evidenced, JobFacts, Money
@@ -246,7 +246,14 @@ def process_jobs(s: Session, job_ids: Sequence[int], llm: LLMClient | None = Non
         job = s.get(Job, jid)
         if job is None:
             continue
-        r = extract_facts(job_posting_text(job, max_chars), job.title, job.company or None, llm, pv)
+        try:
+            r = extract_facts(job_posting_text(job, max_chars), job.title, job.company or None, llm, pv)
+        except DailyLimitReached:
+            raise
+        except Exception as e:  # noqa: BLE001 - one job's provider error must not stop the run
+            log_event(log, "facts_job_failed", level=logging.WARNING, job_id=jid, error=f"{type(e).__name__}: {str(e)[:200]}")
+            out["errors"] = out.get("errors", 0) + 1
+            continue  # facts left as they were, so `--stale` retries this job next time
         store_facts(s, jid, r)
         s.commit()
         out["valid" if r.valid else "invalid"] += 1
