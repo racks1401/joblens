@@ -175,3 +175,8 @@ def test_coerce_unwraps_evidenced_title_company() -> None:
     raw = {"title": {"value": "SDE Intern", "evidence": "Title: SDE Intern"}, "company": {"value": "Paytm", "evidence": "x"}}
     f = JobFacts.model_validate(coerce_raw(raw, "fallback", None))
     assert f.title == "SDE Intern" and f.company == "Paytm"
+
+
+def test_coerce_bare_null_field() -> None:
+    f = JobFacts.model_validate(coerce_raw({"title": "T", "duration_months": None, "ppo_or_conversion": None}, "T", None))
+    assert f.duration_months.value is None and f.ppo_or_conversion.value is None

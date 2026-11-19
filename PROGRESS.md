@@ -221,4 +221,65 @@ Port 5432 was held by the local Postgres 17 service, so the db container maps ho
 container failed because `ui/streamlit_app.py` did not exist yet (P7); added a minimal status page (API
 status line + cold-start wait, spec 17) so the stack starts cleanly. The real pages are still P7.
 
+### Step 2 — job pool fixed for freshers ✔ (no LLM calls)
+- **Seniority filter** (`app/ingest/seniority.py`, migration 0002 `jobs.is_fresher_relevant` +
+  `seniority_reason`): title has senior/sr/staff/principal/lead/manager/director/head/architect (also
+  vp/chief, levels III+, SDE3), or the text asks for X+ years with X >= 3 → not fresher-relevant. Junior
+  titles (intern, graduate, trainee, ...) override the soft words (lead/manager/head/architect), so
+  "Product Manager Intern" and "Associate Product Manager" stay. Rows stay in the DB; new senior jobs are
+  not added at ingestion; the per-company cap counts only fresher-relevant jobs.
+- **India eligibility** (your mid-run request; migration 0003 `is_india_eligible`, `location_reason`,
+  generated `in_scope = is_fresher_relevant AND is_india_eligible`): location parts are checked
+  separately — any Indian place → eligible; only generic remote terms (Remote, Global, Anywhere, APAC) →
+  eligible; a remote listing next to or qualified by another place ("Remote - US", "Vienna, Austria /
+  Remote", "Remote, AMER") → not India-eligible. Added Indian states and more cities (Patna was missed).
+- Matching, `/search`, evals and extraction use `in_scope` by default (`include_out_of_scope=true` /
+  `--include-out-of-scope` to override).
+- **More companies**: `scripts/verify_more_companies.py` probed 154 new candidates (every token with a real
+  request): 44 returned 200, 23 kept with >= 1 fresher-relevant India/remote job → 110 boards.
+- Counts (active jobs, dev DB): before 206 fresher-relevant (of 985) → after new boards 466 (of 1,245) →
+  after India eligibility **341 in scope** (of 1,249): 270+ India locations, ~67 open remote; only 24 are
+  internships and ~5 new-grad titles — most in-scope jobs simply have no seniority signal (this includes
+  non-tech roles such as account executives). Spot-check of 20 excluded / 20 included was shown to you;
+  it is what motivated the India-eligibility rule.
+
+### Step 3 — Gemini as second provider ✔
+Per-role providers (`role_providers` in settings): extract → Gemini `gemini-3.5-flash-lite`;
+profile (resume), explain, agent, judge/drafts → Groq. One rate limiter per provider endpoint
+(tokens/min + requests/min; Gemini 10 req/min, since it sends no rate-limit headers). Gemini daily-quota
+429s stop the run cleanly. Model choice from Gemini's live list: `gemini-3.5-flash-lite` probe was
+schema-valid with 0 evidence drops (2.3k tokens, 11.8 s); `gemini-3.8-flash` timed out at 90 s.
+
+### Step 4 — extraction on Gemini ✔ (341/341 in-scope jobs)
+- `python -m app.pipeline --stale --steps facts,search` on `gemini-3.5-flash-lite` (facts_v1), fresher-relevant
+  and India first, resumable. Took three runs: (1) stopped by me after ~70 jobs because Gemini wraps
+  `title`/`company` as `{value, evidence}` and every job needed a retry (fixed in `coerce_raw`); (2) crashed
+  at ~150 jobs on a Gemini **HTTP 503 "high demand"** (fixed: back-off on 5xx/timeouts, and one failing job
+  no longer stops the run); (3) finished the rest with 0 rate-limit hits and 0 failed jobs.
+- **Result: 341/341 schema-valid after retries (100%); 86 evidence drops vs 1,619 kept values → 5.0% drop
+  rate.** 429 Gemini calls, 1.21M input / 0.20M output tokens. Drops: required_skills 61,
+  nice_to_have 16, locations 6, other 3. 99 attempts were retried (title/company wrapping, then bare
+  `"field": null`; the latter is now also coerced).
+- **Head-to-head on the 25 jobs both models extracted** (same text and prompt, replayed from `llm_cache`, scored
+  with the current checker, `scripts/compare_models.py`): gpt-oss-20b 25/25 valid, 125 values kept,
+  20 dropped (13.8%), drops in 13/25 jobs; gemini-3.5-flash-lite 25/25 valid, 141 kept, 10 dropped (6.6%),
+  drops in 6/25 jobs. This measures grounding, not accuracy; E2 with gold labels will compare accuracy.
+- gpt-oss-20b outputs are kept in `llm_cache` (only `job_facts` rows were replaced), so
+  `python -m evals.run --suite extraction --model openai/gpt-oss-20b,gemini-3.5-flash-lite` reuses them;
+  the eval routes each model to the provider that serves it.
+Evidence-drop audit (`scripts/audit_evidence_drops.py`, replayed from `llm_cache`, no API calls) of the
+real gpt-oss-20b extractions: 52 jobs, 56 drops (more than the 45/49 reported earlier because the pilot
+re-scoring runs added jobs). 15 were formatting-only and the check was too strict: U+2011 non-breaking
+hyphen vs "-", quote marks wrapped around the evidence, "; "/". " inserted where our bullet line breaks
+were, and a ". ." artifact from our HTML-to-text step. Fixed (in-token punctuation kept, so "7.0" ≠ "70").
+41 stay dropped and are genuinely wrong: 38 quotes not in the posting (long multi-sentence quotes that
+skip words or clauses, and invented ones such as "Job is a senior leadership role in a SaaS company" or
+"Full-time" where the posting never says it) and 3 values with no evidence.
+
+### Step 5 — existing retrieval drafts after the pool change (not redrafted)
+Of 847 drafted pairs: **139 still valid** (job active and in scope), 677 now out of scope as senior,
+31 as not open to India, 0 inactive. The filter agrees with the drafts: it removed 660 of the 713
+drafted 0s but only 1 of the 16 drafted 2s. Valid pairs by relevance: 15 × 2, 71 × 1, 53 × 0. A rebuilt
+in-scope pool would have 786 pairs; all 139 are in it, so 647 would need new drafts. Waiting for your go-ahead.
+
 ## Not started: P5, P6, P7.

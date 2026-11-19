@@ -112,6 +112,7 @@ def coerce_raw(raw: dict[str, Any], title: str, company: str | None) -> dict[str
     for f in EVIDENCED_FIELDS:
         v = out.get(f)
         if v is None:
+            out.pop(f, None)  # bare null ("duration_months": null) means "not stated" -> default empty field
             continue
         if not isinstance(v, dict) or ("value" not in v and "evidence" not in v):
             v = {"value": v, "evidence": None}
