@@ -20,10 +20,15 @@ SEED = 20261119
 TOP = 20
 
 
-def build_pool(s: Session, top: int = TOP, seed: int = SEED) -> list[dict[str, object]]:
+def build_pool(s: Session, top: int = TOP, seed: int = SEED,
+               profile_ids: list[str] | None = None) -> list[dict[str, object]]:
+    """Union of the top-`top` from every method per profile (in-scope jobs only), shuffled, methods hidden."""
     rows: list[dict[str, object]] = []
     rng = random.Random(seed)
-    for pid, prof in load_profiles().items():
+    profiles = load_profiles()
+    for pid, prof in profiles.items():
+        if profile_ids and pid not in profile_ids:
+            continue
         qtext, kwq = build_profile_query_text(prof), profile_keyword_query(prof)
         ids: set[int] = set()
         for m in METHODS.values():
@@ -44,6 +49,9 @@ def build_pool(s: Session, top: int = TOP, seed: int = SEED) -> list[dict[str, o
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--recheck", action="store_true")
+    ap.add_argument("--top", type=int, default=TOP, help="top-k per method (default 20)")
+    ap.add_argument("--profiles", help="comma-separated profile ids (default: all)")
+    ap.add_argument("--out", default="retrieval_pool.jsonl", help="file name under evals/data/")
     args = ap.parse_args()
     if args.recheck:
         gold = read_jsonl(DATA / "retrieval_labels.jsonl")
@@ -55,12 +63,12 @@ def main() -> None:
     from app.db import session_factory
 
     with session_factory()() as s:
-        rows = build_pool(s)
-    n = write_jsonl(DATA / "retrieval_pool.jsonl", rows)
+        rows = build_pool(s, top=args.top, profile_ids=args.profiles.split(",") if args.profiles else None)
+    n = write_jsonl(DATA / args.out, rows)
     per: dict[object, int] = {}
     for r in rows:
         per[r["profile_id"]] = per.get(r["profile_id"], 0) + 1
-    print(f"wrote {n} pool items for {len(per)} profiles -> evals/data/retrieval_pool.jsonl {per}")
+    print(f"wrote {n} pool items for {len(per)} profiles -> evals/data/{args.out} {per}")
 
 
 if __name__ == "__main__":

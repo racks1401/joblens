@@ -50,10 +50,10 @@ def _profile_text(p: Any) -> str:
             f"wants: {', '.join(p.employment_types)}")
 
 
-def draft_retrieval(llm: LLMClient, batch: int) -> dict[str, int]:
+def draft_retrieval(llm: LLMClient, batch: int, pool_file: str = "retrieval_pool.jsonl") -> dict[str, int]:
     out = DRAFTS / "retrieval_labels_draft.jsonl"
     done = {(r["profile_id"], r["job_key"]) for r in read_jsonl(out)}
-    pool = [r for r in read_jsonl(DATA / "retrieval_pool.jsonl") if (r["profile_id"], r["job_key"]) not in done]
+    pool = [r for r in read_jsonl(DATA / pool_file) if (r["profile_id"], r["job_key"]) not in done]
     profiles = load_profiles()
     by_p: dict[str, list[dict[str, Any]]] = {}
     for r in pool:
@@ -145,6 +145,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--suite", choices=["retrieval", "extraction"], required=True)
     ap.add_argument("--batch", type=int, default=15)
+    ap.add_argument("--pool", default="retrieval_pool.jsonl", help="pool file under evals/data/")
     ap.add_argument("--prompt", default="facts_v2")
     args = ap.parse_args()
     st = get_settings()
@@ -153,7 +154,7 @@ def main() -> None:
     if llm.model in pipeline_models:
         raise SystemExit(f"draft model {llm.model} is also a pipeline model; set JUDGE_MODEL to a different one")
     try:
-        res = draft_retrieval(llm, args.batch) if args.suite == "retrieval" else draft_extraction(llm, args.prompt)
+        res = draft_retrieval(llm, args.batch, args.pool) if args.suite == "retrieval" else draft_extraction(llm, args.prompt)
     except DailyLimitReached as e:
         print(f"STOPPED: provider daily limit ({e}). Re-run the same command later to resume.")
         return
