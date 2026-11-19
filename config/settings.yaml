@@ -16,7 +16,7 @@ providers:
   gemini:
     rpm_limit: 10                 # no rate-limit headers; conservative free-tier pacing, 429s are retried
     tpm_limit: 200000
-prompts: {facts: facts_v3, facts_paste: facts_v4, profile: profile_v1, explain: explain_v1, judge: judge_v1, agent: agent_v1}
+prompts: {facts: facts_v3, facts_paste: facts_v5, profile: profile_v1, explain: explain_v1, judge: judge_v1, agent: agent_v1}
 llm:
   timeout_s: 60
   max_retries: 2

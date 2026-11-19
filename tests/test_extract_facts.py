@@ -264,3 +264,15 @@ def test_guard_batch_years(ev: str, cleared: bool) -> None:
 
     f, reason = guard_batch_years(JobFacts(title="T", graduation_years=Evidenced(value=[2027], evidence=ev)))
     assert (f.graduation_years.value is None) is cleared and (reason is not None) is cleared
+
+
+def test_facts_v5_is_v4_plus_deadline_rule() -> None:
+    from app.config import get_settings
+    from app.extract.prompting import load_prompt
+
+    v4, v5 = load_prompt("facts_v4")[0], load_prompt("facts_v5")[0]
+    assert "obtained by summer 2027" in v5 and "obtained by summer 2027" not in v4
+    assert v5.replace(v5[v5.index(" A degree-completion deadline"):v5.index("rather than listing only the deadline year.")
+                         + len("rather than listing only the deadline year.")], "") == v4
+    st = get_settings()
+    assert st.cfg.prompts.facts_paste == "facts_v5" and st.cfg.prompts.facts == "facts_v3"
