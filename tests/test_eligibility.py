@@ -86,3 +86,17 @@ def test_monthly_inr_conversions() -> None:
     assert monthly_inr(Money(max=60000, currency="INR", period="total"), 6) == 10000
     assert monthly_inr(Money(max=60000, currency="INR", period="total")) is None
     assert monthly_inr(Money(max=1, currency="XYZ", period="month")) is None
+
+
+def test_pay_rule_keeps_original_currency_for_non_inr() -> None:
+    from app.eligibility import rule_pay
+    from app.schemas import JobFacts, Profile
+
+    p = Profile(degree="MCA", graduation_year=2027, skills=[], target_roles=[], min_monthly_pay_inr=50000)
+    f = JobFacts.model_validate({"title": "x", "pay": {"value": {"min": 74000, "max": 148000, "currency": "USD",
+                                                                 "period": "year"}, "evidence": "USD 74,000"}})
+    r = rule_pay(p, f)
+    assert "USD 74,000-148,000 per year (not converted)" in r.message and "₹" + "1," not in r.message
+    f2 = JobFacts.model_validate({"title": "x", "pay": {"value": {"min": 25000, "currency": "INR", "period": "month"},
+                                                        "evidence": "Rs 25,000"}})
+    assert "₹25,000/month" in rule_pay(p, f2).message

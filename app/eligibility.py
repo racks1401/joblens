@@ -162,6 +162,13 @@ def rule_pay(p: Profile, f: JobFacts) -> RuleResult:
         return _rr(rule="pay", status="UNKNOWN", message="Pay is stated without a clear currency or period",
                           evidence=ev)
     st = "PASS" if inr >= p.min_monthly_pay_inr else "SOFT_FAIL"
+    if (m.currency or "INR").upper() != "INR":
+        # Never shown as a rupee monthly figure: the original currency is stated; the comparison is approximate.
+        lo, hi = m.min if m.min is not None else m.max, m.max
+        amt = f"{lo:,.0f}" + (f"-{hi:,.0f}" if hi is not None and hi != lo else "")
+        side = "at or above" if st == "PASS" else "below"
+        return _rr(rule="pay", status=st, message=f"Job pays {m.currency} {amt} per {m.period} (not converted); "
+                   f"{side} your ₹{p.min_monthly_pay_inr:,}/month minimum at an approximate exchange rate", evidence=ev)
     return _rr(rule="pay", status=st,
                       message=f"Job pays about ₹{inr:,.0f}/month; your minimum is ₹{p.min_monthly_pay_inr:,}", evidence=ev)
 
