@@ -102,8 +102,8 @@ def main() -> None:
             jobs = jobs_of(source, data) if status == 200 else None
             ir = [j for j in jobs or [] if location_matches(loc_of(source, j), s.cfg.ingest)]
 
-            def title(j: dict) -> str:
-                return str(j.get("text") if source == "lever" else j.get("title") or "")
+            def title(j: dict, src: str = source) -> str:
+                return str(j.get("text") if src == "lever" else j.get("title") or "")
 
             def desc(j: dict) -> str:
                 return str(j.get("descriptionPlain") or "")  # Greenhouse list has no content: title-only

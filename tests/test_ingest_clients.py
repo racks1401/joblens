@@ -39,7 +39,10 @@ def test_fetch_maps_recorded_board(source: str) -> None:
         assert len(j.description_text) > 200 and "<p>" not in j.description_text and "&lt;" not in j.description_text
         assert j.posted_at is not None and j.posted_at.tzinfo is not None
     cfg = get_settings().cfg.ingest
-    assert sum(location_matches(j.location_raw, cfg) for j in res.jobs) == 3  # 3 matching + 1 other recorded
+    # Recorded as "3 matching + 1 other" under the old filter; the India-eligibility rule correctly rejects
+    # "Maryland; ... / Remote - Washington D.C." (greenhouse) and "Remote, AMER" (ashby).
+    expected = {"greenhouse": 2, "lever": 4, "ashby": 1}[source]
+    assert sum(location_matches(j.location_raw, cfg) for j in res.jobs) == expected
 
 
 @pytest.mark.parametrize("source", ["greenhouse", "lever", "ashby"])

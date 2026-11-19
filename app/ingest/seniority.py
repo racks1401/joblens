@@ -8,7 +8,7 @@ Not fresher-relevant if:
 
 Rows are kept in the DB with is_fresher_relevant=false; matching, evals and extraction skip them by default.
 
-    python -m app.ingest.seniority --backfill    # classify every stored job
+    python -m app.ingest.seniority --backfill    # set seniority + India eligibility on every stored job
 """
 
 from __future__ import annotations
@@ -62,14 +62,18 @@ def backfill() -> dict[str, int]:
     from sqlalchemy import select
 
     from app.db import session_factory
+    from app.ingest.store import _eligibility
     from app.models import Job
 
-    out = {"relevant": 0, "not_relevant": 0}
+    out = {"relevant": 0, "not_relevant": 0, "india_eligible": 0, "not_india_eligible": 0}
     with session_factory()() as s:
         for job in s.execute(select(Job)).scalars():
             ok, reason = classify(job.title, job.description_text)
             job.is_fresher_relevant, job.seniority_reason = ok, reason
             out["relevant" if ok else "not_relevant"] += 1
+            el, why = _eligibility(job.location_raw)
+            job.is_india_eligible, job.location_reason = el, why
+            out["india_eligible" if el else "not_india_eligible"] += 1
         s.commit()
     return out
 

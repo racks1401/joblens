@@ -8,14 +8,14 @@ from sqlalchemy.orm import Session
 SQL = text("""
 SELECT id, ts_rank_cd(fts, q) AS score
 FROM jobs, websearch_to_tsquery('english', :q) AS q
-WHERE is_active AND (is_fresher_relevant OR :senior) AND fts @@ q
+WHERE is_active AND (in_scope OR :all_jobs) AND fts @@ q
 ORDER BY score DESC, id
 LIMIT :limit
 """)
 
 
-def keyword_search(s: Session, q: str, limit: int = 50, include_senior: bool = False) -> list[tuple[int, float]]:
-    """Active (fresher-relevant unless include_senior) jobs matching the query: [(job_id, ts_rank_cd)]."""
+def keyword_search(s: Session, q: str, limit: int = 50, include_out_of_scope: bool = False) -> list[tuple[int, float]]:
+    """Active in-scope (fresher-relevant + India-eligible) jobs unless include_out_of_scope; jobs matching the query: [(job_id, ts_rank_cd)]."""
     if not q.strip():
         return []
-    return [(int(r.id), float(r.score)) for r in s.execute(SQL, {"q": q, "limit": limit, "senior": include_senior})]
+    return [(int(r.id), float(r.score)) for r in s.execute(SQL, {"q": q, "limit": limit, "all_jobs": include_out_of_scope})]

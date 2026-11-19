@@ -46,10 +46,10 @@ def test_pipeline_wrote_facts_embeddings_search_text(client: TestClient, session
 
 @pytest.mark.parametrize("mode", ["keyword", "vector", "hybrid"])
 def test_search_modes(client: TestClient, mode: str) -> None:
-    # the Android job asks for 3+ years -> not fresher-relevant: hidden by default, found with include_senior
+    # the Android job asks for 3+ years -> not fresher-relevant: hidden by default, found with include_out_of_scope
     hidden = client.get("/search", params={"q": "android kotlin", "mode": mode, "limit": 5}).json()["results"]
     assert "Android Developer" not in [x["title"] for x in hidden]
-    r = client.get("/search", params={"q": "android kotlin", "mode": mode, "limit": 5, "include_senior": True})
+    r = client.get("/search", params={"q": "android kotlin", "mode": mode, "limit": 5, "include_out_of_scope": True})
     assert r.status_code == 200, r.text
     res = r.json()["results"]
     assert res and res[0]["title"] == "Android Developer"
@@ -73,7 +73,7 @@ def test_matches_rank_and_hide_ineligible(client: TestClient) -> None:
     assert 0 <= top["final_score"] <= 100 and top["eligibility"]["rules"]
     assert all("message" in r for r in top["eligibility"]["rules"])
     assert {r["title"] for r in client.get(f"/matches/{pid}", params={"show_ineligible": True}).json()["results"]}.isdisjoint(
-        {"Senior Data Engineer", "Android Developer"})  # senior roles excluded unless include_senior
-    full = client.get(f"/matches/{pid}", params={"show_ineligible": True, "include_senior": True}).json()["results"]
+        {"Senior Data Engineer", "Android Developer"})  # senior roles excluded unless include_out_of_scope
+    full = client.get(f"/matches/{pid}", params={"show_ineligible": True, "include_out_of_scope": True}).json()["results"]
     assert {r["title"] for r in full} >= {"Senior Data Engineer"}
     assert any(r["eligibility"]["verdict"] == "INELIGIBLE" for r in full)

@@ -34,6 +34,15 @@ def _repost_count(s: Session, nj: NormalizedJob, now: datetime, window_days: int
     return int(mx or 0) + 1 if n else 0
 
 
+def _eligibility(location: str | None) -> tuple[bool, str]:
+    from app.config import get_settings
+    from app.ingest.normalize import india_eligibility
+
+    if location is None:  # pasted jobs have no ATS location; the user decides
+        return True, "no ATS location (pasted job)"
+    return india_eligibility(location, get_settings().cfg.ingest)
+
+
 def upsert_job(s: Session, nj: NormalizedJob, now: datetime, window_days: int = 90) -> tuple[Job, str]:
     """Insert or update one job. Returns (row, 'new' | 'changed' | 'unchanged'). Does not commit."""
     h = content_hash(nj.company, nj.title, nj.description_text)
@@ -46,11 +55,13 @@ def upsert_job(s: Session, nj: NormalizedJob, now: datetime, window_days: int = 
             repost_count=_repost_count(s, nj, now, window_days),
         )
         row.is_fresher_relevant, row.seniority_reason = classify(nj.title, nj.description_text)
+        row.is_india_eligible, row.location_reason = _eligibility(nj.location_raw)
         s.add(row)
         s.flush()
         return row, "new"
     row.last_seen_at, row.is_active = now, True
     row.location_raw, row.url = nj.location_raw, nj.url
+    row.is_india_eligible, row.location_reason = _eligibility(nj.location_raw)
     row.posted_at = nj.posted_at or row.posted_at
     if row.content_hash != h:
         row.company, row.title, row.description_text, row.content_hash = nj.company, nj.title, nj.description_text, h
@@ -71,7 +82,7 @@ def upsert_company(s: Session, source: str, company: str, jobs: list[NormalizedJ
     for nj in jobs:
         row, kind = upsert_job(s, nj, now, window_days)
         setattr(st, kind, getattr(st, kind) + 1)
-        if kind != "unchanged" and row.is_fresher_relevant:
+        if kind != "unchanged" and row.is_fresher_relevant and row.is_india_eligible:
             st.to_process.append(row.id)
     # Deactivate only jobs that are no longer on the board. A job still on the board but not selected
     # this run (filters/cap) keeps its state. on_board=None means "everything fetched was passed in".

@@ -30,7 +30,7 @@ def search_route(
     min_monthly_pay_inr: int | None = None,
     fresher_only: bool = False,
     profile_id: uuid.UUID | None = None,
-    include_senior: bool = False,
+    include_out_of_scope: bool = False,
     s: Session = Depends(get_session),
 ) -> dict[str, Any]:
     if model and model not in get_settings().cfg.embeddings.models:
@@ -38,6 +38,6 @@ def search_route(
     profile = load_profile(s, profile_id)[1] if profile_id else None
     flt = Filters(employment_type=employment_type, work_mode=work_mode, location=location,
                   min_monthly_pay_inr=min_monthly_pay_inr, fresher_only=fresher_only)
-    out = search(s, q, mode, model, variant, limit, flt if flt.active() else None, profile, include_senior)
+    out = search(s, q, mode, model, variant, limit, flt if flt.active() else None, profile, include_out_of_scope)
     out["results"] = [r.model_dump(mode="json") for r in out["results"]]
     return out

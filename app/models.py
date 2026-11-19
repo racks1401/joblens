@@ -50,6 +50,9 @@ class Job(Base):
     search_text: Mapped[str | None] = mapped_column(Text)
     is_fresher_relevant: Mapped[bool] = mapped_column(Boolean, server_default="true", default=True)
     seniority_reason: Mapped[str | None] = mapped_column(Text)
+    is_india_eligible: Mapped[bool] = mapped_column(Boolean, server_default="true", default=True)
+    location_reason: Mapped[str | None] = mapped_column(Text)
+    in_scope: Mapped[bool] = mapped_column(Boolean, Computed("is_fresher_relevant AND is_india_eligible", persisted=True))
     fts: Mapped[Any] = mapped_column(
         TSVECTOR,
         Computed("to_tsvector('english', coalesce(search_text, title || ' ' || description_text))", persisted=True),

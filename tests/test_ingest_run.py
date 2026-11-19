@@ -34,7 +34,12 @@ def _all_fresher(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def gh_payload() -> dict:
-    return json.loads((FIXTURES / "greenhouse_board.json").read_text(encoding="utf-8"))["payload"]
+    """Recorded Databricks board; first 3 jobs relocated to India so the activity logic has 3 kept + 1 filtered."""
+    p = json.loads((FIXTURES / "greenhouse_board.json").read_text(encoding="utf-8"))["payload"]
+    for j in p["jobs"][:3]:
+        j["location"], j["offices"] = {"name": "Bengaluru, India"}, []
+    p["jobs"][3]["location"], p["jobs"][3]["offices"] = {"name": "Tokyo, Japan / Remote - Japan"}, []
+    return p
 
 
 def run(session: Session, payload: dict | None, now: datetime, status: int = 200) -> dict:

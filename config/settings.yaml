@@ -47,7 +47,12 @@ ingest:
   # Keep only jobs whose location looks like India or open remote. Empty list = keep all.
   india_keywords: [india, bengaluru, bangalore, hyderabad, pune, mumbai, delhi, "new delhi", gurugram, gurgaon,
                    noida, chennai, kolkata, ahmedabad, jaipur, kochi, coimbatore, indore, chandigarh, trivandrum,
-                   thiruvananthapuram, mysore, mysuru, "ncr"]
+                   thiruvananthapuram, mysore, mysuru, "ncr", patna, lucknow, bhubaneswar, nagpur, surat, vadodara,
+                   visakhapatnam, vizag, mangaluru, mangalore, goa, guwahati, ranchi, dehradun, kanpur, varanasi,
+                   # states / UTs (ATS boards often give "City, State")
+                   karnataka, maharashtra, telangana, "tamil nadu", "uttar pradesh", bihar, kerala, gujarat, haryana,
+                   "west bengal", rajasthan, odisha, punjab, "madhya pradesh", "andhra pradesh", assam, jharkhand,
+                   uttarakhand, "himachal pradesh", chhattisgarh]
   remote_keywords: [remote, anywhere, worldwide, global, "work from home", wfh, apac, asia]
   remote_exclude: [us, usa, "u.s.", "united states", canada, uk, "united kingdom", europe, emea, eu, germany,
                    france, spain, brazil, latam, mexico, australia, "north america", americas, japan, singapore,

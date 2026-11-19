@@ -1,3 +1,5 @@
+import pytest
+
 from app.config import IngestCfg
 from app.ingest.common import join_locations, parse_dt
 from app.ingest.normalize import content_hash, html_to_text, location_matches
@@ -55,3 +57,19 @@ def test_paste_job() -> None:
     nj2 = from_paste("Some job text here for testing", "https://x.example/j/1", "Acme")
     assert nj2.source_job_id == from_paste("other text entirely here", "https://x.example/j/1").source_job_id
     assert guess_title("\n\n  ## Backend Engineer\nmore") == "Backend Engineer"
+
+
+@pytest.mark.parametrize("loc,ok", [
+    ("Remote - India", True), ("Remote", True), ("Remote, Global", True), ("Global / Remote", True),
+    ("Home based - Worldwide", True), ("Remote - APAC", True), ("Anywhere", True), ("Delhi HQ", True),
+    ("Remote - EMEA / Remote - India", True),
+    ("Remote - US", False), ("Remote (Europe)", False), ("Vienna, Austria / Remote", False),
+    ("Florida / Florida Remote", False), ("Remote, Georgia; Remote, Tennessee", False),
+    ("Washington DC / Remote", False), ("Sweden (Remote)", False), ("Berlin", False), (None, False),
+])
+def test_india_eligibility(loc: str | None, ok: bool) -> None:
+    from app.config import get_settings
+    from app.ingest.normalize import india_eligibility
+
+    el, reason = india_eligibility(loc, get_settings().cfg.ingest)
+    assert el is ok and reason

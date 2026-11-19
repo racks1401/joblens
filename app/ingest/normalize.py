@@ -82,18 +82,41 @@ def _has_word(text: str, word: str) -> bool:
     return re.search(r"(?<![a-z0-9])" + re.escape(word) + r"(?![a-z0-9])", text) is not None
 
 
-def location_matches(location: str | None, cfg: IngestCfg) -> bool:
-    """True if a location looks like India, or remote without a non-India country restriction.
+# Words that say nothing about WHERE a remote job is open ("Remote, Global", "Fully remote - anywhere").
+GENERIC_REMOTE = {"remote", "anywhere", "worldwide", "global", "globally", "fully", "first", "work", "from", "home",
+                  "wfh", "any", "location", "locations", "distributed", "flexible", "apac", "asia", "pacific",
+                  "asia-pacific", "the", "in", "or", "and", "based", "home-based", "home based"}
 
-    An empty keyword config keeps everything.
+
+def india_eligibility(location: str | None, cfg: IngestCfg) -> tuple[bool, str]:
+    """(open to candidates in India, reason).
+
+    Location strings are split into parts (" / ", ";", "|"). Eligible if any part names an Indian place,
+    or if EVERY part is a generic remote term ("Remote", "Global", "Anywhere", "APAC"). A remote listing that
+    sits next to, or is qualified by, another place ("Vienna, Austria / Remote", "Remote - US",
+    "Remote (Europe)") is not India-eligible: the remote option is limited to that country or region.
     """
     if not cfg.india_keywords and not cfg.remote_keywords:
-        return True
-    if not location:
-        return False
+        return True, "no location filter configured"
+    if not location or not location.strip():
+        return False, "no location"
     loc = location.lower()
     if any(_has_word(loc, k) for k in cfg.india_keywords):
-        return True
-    if any(_has_word(loc, k) for k in cfg.remote_keywords):
-        return not any(_has_word(loc, k) for k in cfg.remote_exclude)
-    return False
+        return True, "India location"
+    parts = [p.strip() for p in re.split(r"\s*(?:/|;|\|)\s*", loc) if p.strip()]
+    if not any(_has_word(loc, k) for k in cfg.remote_keywords):
+        return False, f"not India and not remote: {location.strip()[:60]}"
+    others = []
+    for p in parts:
+        words = [w for w in re.split(r"[\s,()\-–:.]+", p) if w]
+        rest = [w for w in words if w not in GENERIC_REMOTE]
+        if rest:
+            others.append(" ".join(rest))
+    if not others:
+        return True, "open remote"
+    return False, f"remote limited to {', '.join(dict.fromkeys(others))[:60]}"
+
+
+def location_matches(location: str | None, cfg: IngestCfg) -> bool:
+    """True if a job is open to candidates in India (see india_eligibility)."""
+    return india_eligibility(location, cfg)[0]
