@@ -1,0 +1,423 @@
+{
+ "conversations": [
+  {
+   "id": "c01",
+   "ran": true,
+   "messages": [
+    "best internships for me in Bengaluru"
+   ],
+   "grounded": false,
+   "turns": [
+    {
+     "grounding": {
+      "ok": false,
+      "job_ids_checked": [
+       539,
+       1279,
+       7723230003,
+       8229735
+      ],
+      "numbers_checked": [],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [
+       7723230003,
+       8229735
+      ],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": []
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs",
+      "check_eligibility",
+      "check_eligibility"
+     ],
+     "tokens": {
+      "in": 5844,
+      "out": 429,
+      "total": 6273
+     }
+    }
+   ]
+  },
+  {
+   "id": "c02",
+   "ran": true,
+   "messages": [
+    "am I eligible for JNJ TLDP"
+   ],
+   "grounded": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [
+       1303
+      ],
+      "numbers_checked": [
+       "\u20b91,565,000",
+       "\u20b9130,417",
+       "7.5"
+      ],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": []
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs",
+      "get_job",
+      "check_eligibility"
+     ],
+     "tokens": {
+      "in": 5818,
+      "out": 271,
+      "total": 6089
+     }
+    }
+   ]
+  },
+  {
+   "id": "c03",
+   "ran": true,
+   "messages": [
+    "compare Elip and Rubrik"
+   ],
+   "grounded": false,
+   "turns": [
+    {
+     "grounding": {
+      "ok": false,
+      "job_ids_checked": [
+       1295,
+       1125
+      ],
+      "numbers_checked": [
+       "\u20b975,000",
+       "6",
+       "5",
+       "8.0",
+       "7.96",
+       "8.0"
+      ],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [
+       {
+        "value": "7.96",
+        "kind": "cgpa",
+        "context": ": **INELIGIBLE** \u2013 your CGPA (7.96) is below the"
+       }
+      ],
+      "jobs_named_without_id": []
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs",
+      "compare_jobs",
+      "check_eligibility"
+     ],
+     "tokens": {
+      "in": 5774,
+      "out": 377,
+      "total": 6151
+     }
+    }
+   ]
+  },
+  {
+   "id": "c04",
+   "ran": true,
+   "messages": [
+    "remember that I prefer Bengaluru",
+    "now show me software jobs for freshers"
+   ],
+   "grounded": false,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [],
+      "numbers_checked": [],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": []
+     },
+     "stop": null,
+     "tools": [
+      "remember"
+     ],
+     "tokens": {
+      "in": 2011,
+      "out": 93,
+      "total": 2104
+     }
+    },
+    {
+     "grounding": {
+      "ok": false,
+      "job_ids_checked": [
+       350,
+       1270,
+       8130876,
+       341,
+       1149,
+       360,
+       4731054005
+      ],
+      "numbers_checked": [],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [
+       8130876,
+       4731054005
+      ],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": []
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs"
+     ],
+     "tokens": {
+      "in": 2487,
+      "out": 409,
+      "total": 2896
+     }
+    }
+   ]
+  },
+  {
+   "id": "c05",
+   "ran": true,
+   "messages": [
+    "any remote data science or machine learning roles for a 2027 graduate?"
+   ],
+   "grounded": false,
+   "turns": [
+    {
+     "grounding": {
+      "ok": false,
+      "job_ids_checked": [
+       1031,
+       1237,
+       1091,
+       1160,
+       6185008004,
+       5703396
+      ],
+      "numbers_checked": [],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [
+       6185008004,
+       5703396
+      ],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": []
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs",
+      "get_job",
+      "check_eligibility"
+     ],
+     "tokens": {
+      "in": 6269,
+      "out": 560,
+      "total": 6829
+     }
+    }
+   ]
+  },
+  {
+   "id": "c06",
+   "ran": true,
+   "messages": [
+    "what does the Elip software engineer job pay, and what is the deadline?"
+   ],
+   "grounded": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [
+       1295
+      ],
+      "numbers_checked": [
+       "\u20b975,000"
+      ],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": []
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs",
+      "get_job"
+     ],
+     "tokens": {
+      "in": 3942,
+      "out": 169,
+      "total": 4111
+     }
+    }
+   ]
+  },
+  {
+   "id": "c07",
+   "ran": true,
+   "messages": [
+    "do any of my matches look risky or ask for a fee?"
+   ],
+   "grounded": false,
+   "turns": [
+    {
+     "grounding": {
+      "ok": false,
+      "job_ids_checked": [],
+      "numbers_checked": [
+       "400"
+      ],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [
+       {
+        "value": "400",
+        "kind": "other",
+        "context": "BadRequestError: Error code: 400 - {'error': {'"
+       }
+      ],
+      "jobs_named_without_id": []
+     },
+     "stop": "llm_error: BadRequestError: Error code: 400 - {'error': {'message': 'Tool call validation failed: tool call validation failed: parameters for tool search_jobs did not match schema: errors:",
+     "tools": [],
+     "tokens": {
+      "in": 0,
+      "out": 0,
+      "total": 0
+     }
+    }
+   ]
+  },
+  {
+   "id": "c08",
+   "ran": true,
+   "messages": [
+    "find my top match and explain why it fits me"
+   ],
+   "grounded": false,
+   "turns": [
+    {
+     "grounding": {
+      "ok": false,
+      "job_ids_checked": [
+       539,
+       8229735
+      ],
+      "numbers_checked": [
+       "2027",
+       "7.96"
+      ],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [
+       8229735
+      ],
+      "unsupported_numbers": [
+       {
+        "value": "2027",
+        "kind": "cgpa",
+        "context": "r MCA in AI\u202f&\u202fIoT (graduating 2027, CGPA\u202f7.96) sa"
+       },
+       {
+        "value": "7.96",
+        "kind": "cgpa",
+        "context": "&\u202fIoT (graduating 2027, CGPA\u202f7.96) satisfies any"
+       }
+      ],
+      "jobs_named_without_id": []
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs",
+      "explain_match",
+      "check_eligibility"
+     ],
+     "tokens": {
+      "in": 5567,
+      "out": 364,
+      "total": 5931
+     }
+    }
+   ]
+  },
+  {
+   "id": "c09",
+   "ran": true,
+   "messages": [
+    "full-time roles paying at least 50000 a month"
+   ],
+   "grounded": false,
+   "turns": [
+    {
+     "grounding": {
+      "ok": false,
+      "job_ids_checked": [],
+      "numbers_checked": [
+       "400"
+      ],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [
+       {
+        "value": "400",
+        "kind": "other",
+        "context": "BadRequestError: Error code: 400 - {'error': {'"
+       }
+      ],
+      "jobs_named_without_id": []
+     },
+     "stop": "llm_error: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: parameters for tool search_jobs did not match schema: errors:",
+     "tools": [],
+     "tokens": {
+      "in": 0,
+      "out": 0,
+      "total": 0
+     }
+    }
+   ]
+  },
+  {
+   "id": "c10",
+   "ran": true,
+   "messages": [
+    "am I eligible for the Google SDE role?"
+   ],
+   "grounded": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [],
+      "numbers_checked": [],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": []
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs"
+     ],
+     "tokens": {
+      "in": 2462,
+      "out": 141,
+      "total": 2603
+     }
+    }
+   ]
+  }
+ ],
+ "total_tokens": 42987
+}

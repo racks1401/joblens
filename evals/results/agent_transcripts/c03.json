@@ -1,0 +1,187 @@
+{
+ "id": "c03",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "compare Elip and Rubrik",
+   "result": {
+    "session_id": "952528ae-e706-46bf-bd5b-6187c5187c87",
+    "answer": "**Elip – Software Engineer (internship) (job_id: 1295)**  \n- Location: Gurugram, Bengaluru (remote)  \n- Pay: ₹75,000 per month  \n- Duration: 6 months  \n- Required skills: llms and agents, python backends, sql and apis, embeddings  \n- Eligibility: **CHECK** (needs checking for: CGPA, experience, degree)  \n- Trust level: ok  \n\n**Rubrik – Software Engineer (CPD) – Winter Intern (job_id: 1125)**  \n- Location: Bengaluru (onsite)  \n- Pay: not stated  \n- Duration: 5 months  \n- Minimum CGPA: 8.0  \n- Required skills: java, c/c++, scala, python  \n- Eligibility: **INELIGIBLE** (does not meet CGPA requirement)  \n- Trust level: ok  ",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "Elip",
+       "filters": {
+        "employment_type": null,
+        "work_mode": null,
+        "location": null,
+        "min_monthly_pay_inr": null,
+        "fresher_only": false,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 64.4,
+      "result_chars": 1210,
+      "error": null,
+      "output": {
+       "results": [
+        {
+         "job_id": 1295,
+         "title": "Software Engineer",
+         "company": "Elip",
+         "location": null,
+         "final_score": 60,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "url": null
+        },
+        {
+         "job_id": 1280,
+         "title": "Applied AI Research Engineer",
+         "company": "Enterpret",
+         "location": "Bengaluru / Bangalore",
+         "final_score": 56,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "url": "https://job-boards.greenhouse.io/enterpret/jobs/7580532003"
+        },
+        {
+         "job_id": 1279,
+         "title": "Machine Learning Intern",
+         "company": "Enterpret",
+         "location": "Bengaluru / Bangalore",
+         "final_score": 44,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "url": "https://job-boards.greenhouse.io/enterpret/jobs/7723230003"
+        },
+        {
+         "job_id": 660,
+         "title": "Associate Product Manager",
+         "company": "SpotDraft",
+         "location": "SpotDraft HQ, Bengaluru",
+         "final_score": 43,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://jobs.ashbyhq.com/spotdraft/e9146208-bd24-443b-b1d8-96aabd292538"
+        },
+        {
+         "job_id": 1125,
+         "title": "Software Engineer (CPD) - Winter Intern",
+         "company": "Rubrik",
+         "location": "Bangalore / Bangalore, India Office",
+         "final_score": 42,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://www.rubrik.com/company/careers/departments/job.8166537?gh_jid=8166537"
+        }
+       ],
+       "name_matches": null,
+       "excluded_companies": null
+      }
+     },
+     {
+      "step": 1,
+      "tool": "compare_jobs",
+      "args": {
+       "job_ids": [
+        1295,
+        1125
+       ]
+      },
+      "ms": 7.6,
+      "result_chars": 765,
+      "error": null,
+      "output": {
+       "jobs": [
+        {
+         "job_id": 1295,
+         "title": "Software Engineer",
+         "company": "Elip",
+         "type": "internship",
+         "work_mode": "remote",
+         "locations": [
+          "Gurugram",
+          "Bengaluru"
+         ],
+         "pay": {
+          "min": 75000.0,
+          "max": 75000.0,
+          "currency": "INR",
+          "period": "month",
+          "approx_inr_per_month": 75000
+         },
+         "duration_months": 6.0,
+         "min_cgpa": null,
+         "experience_min_years": null,
+         "required_skills": [
+          "llms and agents",
+          "python backends",
+          "sql and apis",
+          "embeddings"
+         ],
+         "eligibility": "CHECK",
+         "trust_level": "ok"
+        },
+        {
+         "job_id": 1125,
+         "title": "Software Engineer (CPD) - Winter Intern",
+         "company": "Rubrik",
+         "type": "internship",
+         "work_mode": "onsite",
+         "locations": [
+          "Bengaluru"
+         ],
+         "pay": null,
+         "duration_months": 5.0,
+         "min_cgpa": 8.0,
+         "experience_min_years": null,
+         "required_skills": [
+          "java",
+          "c/c++",
+          "scala",
+          "python"
+         ],
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok"
+        }
+       ]
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [
+      1295,
+      1125
+     ],
+     "numbers_checked": [
+      "₹75,000",
+      "6",
+      "5",
+      "8.0"
+     ],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "only_profile_values_flagged": false
+    },
+    "tokens": {
+     "in": 3942,
+     "out": 304,
+     "total": 4246
+    },
+    "llm_calls": 3,
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 4.2
+  }
+ ],
+ "memory_after": {}
+}

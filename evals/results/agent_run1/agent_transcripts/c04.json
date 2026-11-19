@@ -1,0 +1,173 @@
+{
+ "id": "c04",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "remember that I prefer Bengaluru",
+   "result": {
+    "session_id": "df072ec9-08c0-4f59-8aa3-3c16fa5ae6e0",
+    "answer": "Your preference for Bengaluru has been saved. Let me know if you’d like to see job listings matching your profile and preferences.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "remember",
+      "args": {
+       "key": "preferred_locations",
+       "value": [
+        "Bengaluru"
+       ]
+      },
+      "ms": 3.4,
+      "result_chars": 47,
+      "error": null,
+      "output": {
+       "saved": {
+        "preferred_locations": [
+         "Bengaluru"
+        ]
+       }
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [],
+     "numbers_checked": [],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": []
+    },
+    "tokens": {
+     "in": 2011,
+     "out": 93,
+     "total": 2104
+    },
+    "llm_calls": 2,
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 2.8
+  },
+  {
+   "user": "now show me software jobs for freshers",
+   "result": {
+    "session_id": "df072ec9-08c0-4f59-8aa3-3c16fa5ae6e0",
+    "answer": "Here are the fresh‑er‑friendly software roles in Bengaluru that match your query (all are currently **INELIGIBLE** for you based on the posting criteria):\n\n- **Associate Software Development Engineer (SDE) Intern, Hevo Data (job_id: 350)** – https://jobs.lever.co/hevodata/993a3ed3-3014-432f-b0f4-28d300d58d9a  \n- **Software Engineer, New Grad, Stripe (job_id: 1270)** – https://stripe.com/jobs/search?gh_jid=8130876  \n- **Associate SDE, Hevo Data (job_id: 341)** – https://jobs.lever.co/hevodata/4eccaf98-ba19-42ea-b040-e0976d4dadfe  \n- **Frontend Engineer, Razorpay (job_id: 1149)** – https://job-boards.greenhouse.io/razorpaysoftwareprivatelimited/jobs/4731054005  \n- **SDE I, Hevo Data (job_id: 360)** – https://jobs.lever.co/hevodata/6cbbe304-e065-4711-bf3e-756795d2bc2a  \n\nAll listings show “INELIGIBLE” for your profile, so you may not meet the stated eligibility requirements. Let me know if you’d like to explore other roles, adjust preferences, or see details for any specific posting.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "software fresher",
+       "filters": {
+        "employment_type": null,
+        "work_mode": null,
+        "location": "Bengaluru",
+        "min_monthly_pay_inr": null,
+        "fresher_only": true,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 72.8,
+      "result_chars": 1258,
+      "error": null,
+      "output": {
+       "results": [
+        {
+         "job_id": 350,
+         "title": "Associate Software Development Engineer (SDE) Intern",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "final_score": 56,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://jobs.lever.co/hevodata/993a3ed3-3014-432f-b0f4-28d300d58d9a"
+        },
+        {
+         "job_id": 1270,
+         "title": "Software Engineer, New Grad",
+         "company": "Stripe",
+         "location": "Bangalore / IN-Bengaluru",
+         "final_score": 56,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://stripe.com/jobs/search?gh_jid=8130876"
+        },
+        {
+         "job_id": 341,
+         "title": "Associate SDE",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "final_score": 29,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://jobs.lever.co/hevodata/4eccaf98-ba19-42ea-b040-e0976d4dadfe"
+        },
+        {
+         "job_id": 1149,
+         "title": "Frontend Engineer",
+         "company": "Razorpay",
+         "location": "Bengaluru / Payments",
+         "final_score": 24,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://job-boards.greenhouse.io/razorpaysoftwareprivatelimited/jobs/4731054005"
+        },
+        {
+         "job_id": 360,
+         "title": "SDE I",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "final_score": 21,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://jobs.lever.co/hevodata/6cbbe304-e065-4711-bf3e-756795d2bc2a"
+        }
+       ],
+       "name_matches": null,
+       "excluded_companies": null
+      }
+     }
+    ],
+    "grounding": {
+     "ok": false,
+     "job_ids_checked": [
+      350,
+      1270,
+      8130876,
+      341,
+      1149,
+      360,
+      4731054005
+     ],
+     "numbers_checked": [],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [
+      8130876,
+      4731054005
+     ],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": []
+    },
+    "tokens": {
+     "in": 2487,
+     "out": 409,
+     "total": 2896
+    },
+    "llm_calls": 2,
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 56.1
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Bengaluru"
+  ]
+ }
+}

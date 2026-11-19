@@ -1,0 +1,170 @@
+{
+ "id": "c06",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "what does the Elip software engineer job pay, and what is the deadline?",
+   "result": {
+    "session_id": "cf5ac5c8-3ee9-4946-b835-34230019794a",
+    "answer": "**Software Engineer, Elip (job_id: 1295)**  \n- Pay: ₹75,000 per month (remote internship)  \n- Application deadline: not stated in the posting  \n\nThe posting does not mention any deadline, so you may need to check the company's career page for the latest details.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "Elip software engineer",
+       "filters": {
+        "employment_type": null,
+        "work_mode": null,
+        "location": null,
+        "min_monthly_pay_inr": null,
+        "fresher_only": false,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 29.1,
+      "result_chars": 1217,
+      "error": null,
+      "output": {
+       "results": [
+        {
+         "job_id": 1295,
+         "title": "Software Engineer",
+         "company": "Elip",
+         "location": null,
+         "final_score": 60,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "url": null
+        },
+        {
+         "job_id": 1125,
+         "title": "Software Engineer (CPD) - Winter Intern",
+         "company": "Rubrik",
+         "location": "Bangalore / Bangalore, India Office",
+         "final_score": 51,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://www.rubrik.com/company/careers/departments/job.8166537?gh_jid=8166537"
+        },
+        {
+         "job_id": 1286,
+         "title": "AI Engineer – AI Agents (Healthcare)",
+         "company": "100ms",
+         "location": "Bengaluru",
+         "final_score": 47,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://jobs.lever.co/100ms/4c9f19c7-4432-4394-ba93-167319c68adc"
+        },
+        {
+         "job_id": 539,
+         "title": "Software Development Engineer Intern",
+         "company": "HackerRank",
+         "location": "Onsite in Bangalore / Hybrid in Bengaluru, India",
+         "final_score": 45,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "url": "https://job-boards.greenhouse.io/hackerrank/jobs/8229735"
+        },
+        {
+         "job_id": 1276,
+         "title": "QA Engineer",
+         "company": "Sigmoid",
+         "location": "Bengaluru / Sigmoid",
+         "final_score": 42,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://job-boards.greenhouse.io/sigmoid/jobs/7916306002"
+        }
+       ],
+       "name_matches": null,
+       "excluded_companies": null
+      }
+     },
+     {
+      "step": 1,
+      "tool": "get_job",
+      "args": {
+       "job_id": 1295
+      },
+      "ms": 2.7,
+      "result_chars": 565,
+      "error": null,
+      "output": {
+       "job_id": 1295,
+       "title": "Software Engineer",
+       "company": "Elip",
+       "url": null,
+       "location": null,
+       "type": "internship",
+       "work_mode": "remote",
+       "locations": [
+        "Gurugram",
+        "Bengaluru"
+       ],
+       "pay": {
+        "min": 75000.0,
+        "max": 75000.0,
+        "currency": "INR",
+        "period": "month",
+        "approx_inr_per_month": 75000
+       },
+       "duration_months": 6.0,
+       "degrees": null,
+       "branches": null,
+       "batch": null,
+       "min_cgpa": null,
+       "experience_min_years": null,
+       "required_skills": [
+        "llms and agents",
+        "python backends",
+        "sql and apis",
+        "embeddings"
+       ],
+       "apply_deadline": null,
+       "ppo": true,
+       "red_flags": [],
+       "trust": {
+        "score": 100,
+        "level": "ok",
+        "reasons": []
+       },
+       "flags": []
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [
+      1295
+     ],
+     "numbers_checked": [
+      "₹75,000"
+     ],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "only_profile_values_flagged": false
+    },
+    "tokens": {
+     "in": 3942,
+     "out": 176,
+     "total": 4118
+    },
+    "llm_calls": 3,
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 57.8
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Bengaluru"
+  ]
+ }
+}

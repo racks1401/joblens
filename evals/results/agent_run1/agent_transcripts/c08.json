@@ -1,0 +1,213 @@
+{
+ "id": "c08",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "find my top match and explain why it fits me",
+   "result": {
+    "session_id": "53fc9a25-5492-44ae-9b90-fa623ba91dea",
+    "answer": "**Software Development Engineer Intern, HackerRank (job_id: 539)**  \n🔗 https://job-boards.greenhouse.io/hackerrank/jobs/8229735  \n\n**Why it fits you**  \n- **Location:** Bengaluru – matches your preferred location.  \n- **Role:** Software engineering internship – aligns with your target roles (software engineer intern, AI engineer).  \n- **Eligibility verdict:** **CHECK** – the posting does not specify required degree, specialization, graduation year, or minimum CGPA, so those items need verification. All other criteria (experience, employment type, pay) pass.  \n\n**Next steps**  \nReview the job description to confirm that your MCA in AI & IoT (graduating 2027, CGPA 7.96) satisfies any unstated degree or batch requirements before applying.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "software engineer intern Bengaluru",
+       "filters": {
+        "employment_type": null,
+        "work_mode": null,
+        "location": null,
+        "min_monthly_pay_inr": null,
+        "fresher_only": false,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 32.5,
+      "result_chars": 1374,
+      "error": null,
+      "output": {
+       "results": [
+        {
+         "job_id": 539,
+         "title": "Software Development Engineer Intern",
+         "company": "HackerRank",
+         "location": "Onsite in Bangalore / Hybrid in Bengaluru, India",
+         "final_score": 92,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "url": "https://job-boards.greenhouse.io/hackerrank/jobs/8229735"
+        },
+        {
+         "job_id": 1125,
+         "title": "Software Engineer (CPD) - Winter Intern",
+         "company": "Rubrik",
+         "location": "Bangalore / Bangalore, India Office",
+         "final_score": 82,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://www.rubrik.com/company/careers/departments/job.8166537?gh_jid=8166537"
+        },
+        {
+         "job_id": 1108,
+         "title": "Software Engineer, Intern",
+         "company": "Stripe",
+         "location": "Bengaluru / IN-Bengaluru",
+         "final_score": 70,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://stripe.com/jobs/search?gh_jid=8031833"
+        },
+        {
+         "job_id": 350,
+         "title": "Associate Software Development Engineer (SDE) Intern",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "final_score": 62,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://jobs.lever.co/hevodata/993a3ed3-3014-432f-b0f4-28d300d58d9a"
+        },
+        {
+         "job_id": 1278,
+         "title": "[Backend, Onsite] Software Engineering Intern",
+         "company": "Enterpret",
+         "location": "Bengaluru, Onsite / Bangalore",
+         "final_score": 59,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://job-boards.greenhouse.io/enterpret/jobs/7847134003"
+        }
+       ],
+       "name_matches": null,
+       "excluded_companies": null
+      }
+     },
+     {
+      "step": 1,
+      "tool": "explain_match",
+      "args": {
+       "job_id": 539
+      },
+      "ms": 36.6,
+      "result_chars": 135,
+      "error": "Daily LLM token budget reached; this optional step was skipped.",
+      "output": {
+       "job_id": 539,
+       "title": "Software Development Engineer Intern",
+       "error": "Daily LLM token budget reached; this optional step was skipped."
+      }
+     },
+     {
+      "step": 2,
+      "tool": "check_eligibility",
+      "args": {
+       "job_id": 539
+      },
+      "ms": 2.6,
+      "result_chars": 884,
+      "error": null,
+      "output": {
+       "job_id": 539,
+       "title": "Software Development Engineer Intern",
+       "company": "HackerRank",
+       "verdict": "CHECK",
+       "needs_checking": [
+        "degree",
+        "specialization",
+        "graduation_year",
+        "cgpa"
+       ],
+       "failed": null,
+       "rules": [
+        {
+         "rule": "degree",
+         "status": "UNKNOWN",
+         "message": "Job does not state allowed degrees"
+        },
+        {
+         "rule": "specialization",
+         "status": "UNKNOWN",
+         "message": "Job does not state branches"
+        },
+        {
+         "rule": "graduation_year",
+         "status": "UNKNOWN",
+         "message": "Job does not state batch years"
+        },
+        {
+         "rule": "cgpa",
+         "status": "UNKNOWN",
+         "message": "Job does not state a minimum CGPA"
+        },
+        {
+         "rule": "experience",
+         "status": "PASS",
+         "message": "Job gives no minimum experience"
+        },
+        {
+         "rule": "location",
+         "status": "PASS",
+         "message": "Job is in Bengaluru, one of your locations"
+        },
+        {
+         "rule": "pay",
+         "status": "PASS",
+         "message": "You have no minimum pay set"
+        },
+        {
+         "rule": "employment_type",
+         "status": "PASS",
+         "message": "Job is internship; you want internship, full time"
+        }
+       ]
+      }
+     }
+    ],
+    "grounding": {
+     "ok": false,
+     "job_ids_checked": [
+      539,
+      8229735
+     ],
+     "numbers_checked": [
+      "2027",
+      "7.96"
+     ],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [
+      8229735
+     ],
+     "unsupported_numbers": [
+      {
+       "value": "2027",
+       "kind": "cgpa",
+       "context": "r MCA in AI & IoT (graduating 2027, CGPA 7.96) sa"
+      },
+      {
+       "value": "7.96",
+       "kind": "cgpa",
+       "context": "& IoT (graduating 2027, CGPA 7.96) satisfies any"
+      }
+     ],
+     "jobs_named_without_id": []
+    },
+    "tokens": {
+     "in": 5567,
+     "out": 364,
+     "total": 5931
+    },
+    "llm_calls": 4,
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 59.1
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Bengaluru"
+  ]
+ }
+}

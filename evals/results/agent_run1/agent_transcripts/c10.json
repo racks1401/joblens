@@ -1,0 +1,124 @@
+{
+ "id": "c10",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "am I eligible for the Google SDE role?",
+   "result": {
+    "session_id": "c73f60a5-f506-499d-9d0e-3f779ea306c5",
+    "answer": "I couldn’t find any posting for a Google SDE role in the current search results, so I can’t check eligibility for that specific job. If you have a different job title or company name, let me know and I’ll look it up for you.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "Google SDE",
+       "filters": {
+        "employment_type": null,
+        "work_mode": null,
+        "location": null,
+        "min_monthly_pay_inr": null,
+        "fresher_only": false,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 31.4,
+      "result_chars": 1493,
+      "error": null,
+      "output": {
+       "results": [
+        {
+         "job_id": 1254,
+         "title": "SDE II - Data Engineer",
+         "company": "InMobi",
+         "location": "Lucknow",
+         "final_score": 73,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://job-boards.greenhouse.io/inmobi/jobs/7747785"
+        },
+        {
+         "job_id": 360,
+         "title": "SDE I",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "final_score": 57,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://jobs.lever.co/hevodata/6cbbe304-e065-4711-bf3e-756795d2bc2a"
+        },
+        {
+         "job_id": 1280,
+         "title": "Applied AI Research Engineer",
+         "company": "Enterpret",
+         "location": "Bengaluru / Bangalore",
+         "final_score": 53,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "url": "https://job-boards.greenhouse.io/enterpret/jobs/7580532003"
+        },
+        {
+         "job_id": 341,
+         "title": "Associate SDE",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "final_score": 44,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://jobs.lever.co/hevodata/4eccaf98-ba19-42ea-b040-e0976d4dadfe"
+        },
+        {
+         "job_id": 1125,
+         "title": "Software Engineer (CPD) - Winter Intern",
+         "company": "Rubrik",
+         "location": "Bangalore / Bangalore, India Office",
+         "final_score": 42,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://www.rubrik.com/company/careers/departments/job.8166537?gh_jid=8166537"
+        }
+       ],
+       "name_matches": [
+        {
+         "job_id": 350,
+         "title": "Associate Software Development Engineer (SDE) Intern",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://jobs.lever.co/hevodata/993a3ed3-3014-432f-b0f4-28d300d58d9a"
+        }
+       ],
+       "excluded_companies": null
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [],
+     "numbers_checked": [],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": []
+    },
+    "tokens": {
+     "in": 2462,
+     "out": 141,
+     "total": 2603
+    },
+    "llm_calls": 2,
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 1.7
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Bengaluru"
+  ]
+ }
+}

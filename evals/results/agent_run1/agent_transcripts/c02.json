@@ -1,0 +1,246 @@
+{
+ "id": "c02",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "am I eligible for JNJ TLDP",
+   "result": {
+    "session_id": "b86dec6e-a948-4091-bd8b-0990e511227c",
+    "answer": "**TLDP (Technology Leadership Development Program), Johnson & Johnson (job_id: 1303)**  \n- Location: Hyderabad (your preferred locations are Bengaluru, Gurugram)  \n- Pay: ₹1,565,000 per year (≈ ₹130,417 per month)  \n- Eligibility verdict: **CHECK** – the following rules need checking: graduation_year, location. All other eligibility rules (degree, specialization, CGPA 7.5+, experience) pass.  \n\nSince the role is in Hyderabad, it does not match your preferred locations. If you’re willing to consider Hyderabad, you can apply; otherwise you may look for other opportunities.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "JNJ TLDP",
+       "filters": {
+        "employment_type": null,
+        "work_mode": null,
+        "location": null,
+        "min_monthly_pay_inr": null,
+        "fresher_only": false,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 59.4,
+      "result_chars": 1313,
+      "error": null,
+      "output": {
+       "results": [
+        {
+         "job_id": 1302,
+         "title": "JJT Internship",
+         "company": "Johnson & Johnson",
+         "location": null,
+         "final_score": 93,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "url": null
+        },
+        {
+         "job_id": 1304,
+         "title": "Product Engineer",
+         "company": "Johnson & Johnson",
+         "location": null,
+         "final_score": 90,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "url": null
+        },
+        {
+         "job_id": 660,
+         "title": "Associate Product Manager",
+         "company": "SpotDraft",
+         "location": "SpotDraft HQ, Bengaluru",
+         "final_score": 78,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://jobs.ashbyhq.com/spotdraft/e9146208-bd24-443b-b1d8-96aabd292538"
+        },
+        {
+         "job_id": 1280,
+         "title": "Applied AI Research Engineer",
+         "company": "Enterpret",
+         "location": "Bengaluru / Bangalore",
+         "final_score": 71,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "url": "https://job-boards.greenhouse.io/enterpret/jobs/7580532003"
+        },
+        {
+         "job_id": 579,
+         "title": "Systems Engineer II - R&D Business Systems",
+         "company": "Fivetran",
+         "location": "Bengaluru, Karnataka, India, APAC / IND - Bengaluru",
+         "final_score": 68,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://www.fivetran.com/careers/job?gh_jid=8201478003"
+        }
+       ],
+       "name_matches": [
+        {
+         "job_id": 1303,
+         "title": "TLDP (Technology Leadership Development Program)",
+         "company": "Johnson & Johnson",
+         "location": null,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "url": null
+        }
+       ],
+       "excluded_companies": null
+      }
+     },
+     {
+      "step": 1,
+      "tool": "get_job",
+      "args": {
+       "job_id": 1303
+      },
+      "ms": 4.5,
+      "result_chars": 665,
+      "error": null,
+      "output": {
+       "job_id": 1303,
+       "title": "TLDP (Technology Leadership Development Program)",
+       "company": "Johnson & Johnson",
+       "url": null,
+       "location": null,
+       "type": "full_time",
+       "work_mode": null,
+       "locations": [
+        "Hyderabad"
+       ],
+       "pay": {
+        "min": 1565000.0,
+        "max": 1565000.0,
+        "currency": "INR",
+        "period": "year",
+        "approx_inr_per_month": 130417
+       },
+       "duration_months": null,
+       "degrees": [
+        "BACHELORS",
+        "MASTERS",
+        "MCA",
+        "MTECH"
+       ],
+       "branches": [
+        "computer science",
+        "electronics",
+        "electrical engineering",
+        "mathematics and computing"
+       ],
+       "batch": null,
+       "min_cgpa": 7.5,
+       "experience_min_years": null,
+       "required_skills": [
+        "coding"
+       ],
+       "apply_deadline": "2026-11-19",
+       "ppo": null,
+       "red_flags": [],
+       "trust": {
+        "score": 98,
+        "level": "ok",
+        "reasons": []
+       },
+       "flags": []
+      }
+     },
+     {
+      "step": 2,
+      "tool": "check_eligibility",
+      "args": {
+       "job_id": 1303
+      },
+      "ms": 7.7,
+      "result_chars": 993,
+      "error": null,
+      "output": {
+       "job_id": 1303,
+       "title": "TLDP (Technology Leadership Development Program)",
+       "company": "Johnson & Johnson",
+       "verdict": "CHECK",
+       "needs_checking": [
+        "graduation_year",
+        "location"
+       ],
+       "failed": null,
+       "rules": [
+        {
+         "rule": "degree",
+         "status": "PASS",
+         "message": "Job allows BACHELORS, MASTERS, MCA, MTECH; you have MCA"
+        },
+        {
+         "rule": "specialization",
+         "status": "PASS",
+         "message": "Job allows computer science, electronics, electrical engineering, mathematics and computing; you have AI & IoT"
+        },
+        {
+         "rule": "graduation_year",
+         "status": "UNKNOWN",
+         "message": "Job does not state batch years"
+        },
+        {
+         "rule": "cgpa",
+         "status": "PASS",
+         "message": "Job asks for 7.5 CGPA; you have 7.96"
+        },
+        {
+         "rule": "experience",
+         "status": "PASS",
+         "message": "Job gives no minimum experience"
+        },
+        {
+         "rule": "location",
+         "status": "SOFT_FAIL",
+         "message": "Job is in Hyderabad; you prefer Bengaluru, Gurugram"
+        },
+        {
+         "rule": "pay",
+         "status": "PASS",
+         "message": "You have no minimum pay set"
+        },
+        {
+         "rule": "employment_type",
+         "status": "PASS",
+         "message": "Job is full time; you want internship, full time"
+        }
+       ]
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [
+      1303
+     ],
+     "numbers_checked": [
+      "₹1,565,000",
+      "₹130,417",
+      "7.5"
+     ],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": []
+    },
+    "tokens": {
+     "in": 5818,
+     "out": 271,
+     "total": 6089
+    },
+    "llm_calls": 4,
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 60.1
+  }
+ ],
+ "memory_after": {}
+}

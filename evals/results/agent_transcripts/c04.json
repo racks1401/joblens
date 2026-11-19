@@ -1,0 +1,170 @@
+{
+ "id": "c04",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "remember that I prefer Bengaluru",
+   "result": {
+    "session_id": "2787e8f8-b3e4-4fdf-a705-d394d8fe1514",
+    "answer": "Preference saved: Bengaluru is now your preferred location.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "remember",
+      "args": {
+       "key": "preferred_locations",
+       "value": [
+        "Bengaluru"
+       ]
+      },
+      "ms": 2.8,
+      "result_chars": 47,
+      "error": null,
+      "output": {
+       "saved": {
+        "preferred_locations": [
+         "Bengaluru"
+        ]
+       }
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [],
+     "numbers_checked": [],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "only_profile_values_flagged": false
+    },
+    "tokens": {
+     "in": 2011,
+     "out": 87,
+     "total": 2098
+    },
+    "llm_calls": 2,
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 56.4
+  },
+  {
+   "user": "now show me software jobs for freshers",
+   "result": {
+    "session_id": "2787e8f8-b3e4-4fdf-a705-d394d8fe1514",
+    "answer": "- Junior Ubuntu Software Engineer, Canonical (job_id: 76) – https://job-boards.greenhouse.io/canonical/jobs/6707669  \n- Graduate Software Engineer, Open Source and Linux, Canonical Ubuntu (job_id: 61) – https://job-boards.greenhouse.io/canonical/jobs/8379825  \n- Junior Linux Kernel Engineer - Ubuntu, Canonical (job_id: 1261) – https://job-boards.greenhouse.io/canonical/jobs/5370815  \n- Associate Software Development Engineer (SDE) Intern, Hevo Data (job_id: 350) – https://jobs.lever.co/hevodata/993a3ed3-3014-432f-b0f4-28d300d58d9a  \n- Software Engineer, New Grad, Stripe (job_id: 1270) – https://stripe.com/jobs/search?gh_jid=8130876",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "software fresher",
+       "filters": {
+        "employment_type": null,
+        "work_mode": null,
+        "location": null,
+        "min_monthly_pay_inr": null,
+        "fresher_only": true,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 183.2,
+      "result_chars": 1318,
+      "error": null,
+      "output": {
+       "results": [
+        {
+         "job_id": 76,
+         "title": "Junior Ubuntu Software Engineer",
+         "company": "Canonical",
+         "location": "Home based - Worldwide",
+         "final_score": 69,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://job-boards.greenhouse.io/canonical/jobs/6707669"
+        },
+        {
+         "job_id": 61,
+         "title": "Graduate Software Engineer, Open Source and Linux, Canonical Ubuntu",
+         "company": "Canonical",
+         "location": "Home based - Worldwide",
+         "final_score": 65,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://job-boards.greenhouse.io/canonical/jobs/8379825"
+        },
+        {
+         "job_id": 1261,
+         "title": "Junior Linux Kernel Engineer - Ubuntu",
+         "company": "Canonical",
+         "location": "Home based - Worldwide",
+         "final_score": 63,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "url": "https://job-boards.greenhouse.io/canonical/jobs/5370815"
+        },
+        {
+         "job_id": 350,
+         "title": "Associate Software Development Engineer (SDE) Intern",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "final_score": 56,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://jobs.lever.co/hevodata/993a3ed3-3014-432f-b0f4-28d300d58d9a"
+        },
+        {
+         "job_id": 1270,
+         "title": "Software Engineer, New Grad",
+         "company": "Stripe",
+         "location": "Bangalore / IN-Bengaluru",
+         "final_score": 56,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "url": "https://stripe.com/jobs/search?gh_jid=8130876"
+        }
+       ],
+       "name_matches": null,
+       "excluded_companies": null
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [
+      76,
+      61,
+      1261,
+      350,
+      1270
+     ],
+     "numbers_checked": [],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "only_profile_values_flagged": false
+    },
+    "tokens": {
+     "in": 2420,
+     "out": 304,
+     "total": 2724
+    },
+    "llm_calls": 2,
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 2.4
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Bengaluru"
+  ]
+ }
+}

@@ -1,0 +1,46 @@
+{
+ "id": "c09",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "full-time roles paying at least 50000 a month",
+   "result": {
+    "session_id": "26d69e62-15c1-48db-8ea1-adee922357bf",
+    "answer": "I could not finish this request: llm_error: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: parameters for tool search_jobs did not match schema: errors:. Nothing below is a recommendation; please try again later.",
+    "tool_trace": [],
+    "grounding": {
+     "ok": false,
+     "job_ids_checked": [],
+     "numbers_checked": [
+      "400"
+     ],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [
+      {
+       "value": "400",
+       "kind": "other",
+       "context": "BadRequestError: Error code: 400 - {'error': {'"
+      }
+     ],
+     "jobs_named_without_id": []
+    },
+    "tokens": {
+     "in": 0,
+     "out": 0,
+     "total": 0
+    },
+    "llm_calls": 0,
+    "stop": "llm_error: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: parameters for tool search_jobs did not match schema: errors:",
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 1.4
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Bengaluru"
+  ]
+ }
+}

@@ -562,4 +562,48 @@ proposal: add it as an anonymized `p00` (no name) before drafting.
    debatable moves: CloudSEK "Security Consultant Intern" and "Technical Security Consultant", Stable Money "AI
    Product Builder" (no tech skills extracted); it misses "Training Content Developer". Not applied.
 
-## Not started: P6, P7.
+## Session 13 (2026-11-19) — role-family fix, P6 agent
+
+1. **Role-family fix applied** (`app/ingest/role_family.py`): classify on the title head (before " - ", "(", ":",
+   ","); hard non-tech words (sales, revenue, partnerships, content, risk management, verification, benefits,
+   recruiting, people operations) make a title other unless the head names an engineer/developer/SDE/scientist;
+   weak words (ai, platform, systems, security, embedded, cloud, ...) are vetoed when the extracted skills contain
+   nothing technical; content/training/course developers are other. Reviewed overrides in
+   `ingest.role_family_overrides` keep the two CloudSEK security consultant roles and Stable Money "AI Product
+   Builder" in scope. In scope 119 → 111 (105 board + 6 pasted). Moved out (not deleted): #1036 Business Systems
+   Analyst, ServiceNow (Okta); #1104 Global People Operations - Systems Administrator (Stripe); #1260 Embedded
+   Devices Software Solution Sales (Canonical); #1262 Security Risk Management Specialist (Canonical); #1274
+   Security Consultant - Partnerships (CloudSEK); #1277 Founder's Office: Revenue Operations (Enterpret); #1287
+   Benefit Verification Specialist - AI Agents (100ms); #1292 Training Content Developer (ChargePoint).
+   E1 re-run: changes within noise (with drafts: hybrid nDCG@10 0.519 → 0.511, vector 0.468 → 0.459, keyword
+   0.446 → 0.449; human-only hybrid 0.372 → 0.362; p00 hybrid 0.628 → 0.592, vector 0.783 unchanged).
+2. **P6 agent** (no framework): `app/agent/tools.py` (search_jobs, get_job, check_eligibility, explain_match,
+   compare_jobs, remember; Pydantic args → JSON Schema; invalid args come back to the model as an error),
+   `app/agent/loop.py` (max 6 steps, last 10 messages, 120-word summary every 6 messages, temperature 0.2, tokens
+   counted per turn, clean stop on daily limit / rate limit / budget), `app/agent/memory.py`,
+   `app/agent/validate.py` (grounding check), `app/explain.py` (explain_v1, skills filtered to the inputs, cached in
+   `explanations`), `app/api/routes_chat.py` (POST /chat, GET/DELETE /memory/{profile_id}[/{key}],
+   GET /matches/{profile_id}/{job_id}/explain). Offline fake policy for tests. 307 tests pass.
+   - **Grounding check** (code, after every answer): every job id and every pay / years / CGPA / date / other
+     number in the answer must appear in that turn's tool outputs; links are ignored; jobs named by title must
+     carry their id; bare small integers (list numbers, "top 5") are skipped and counted. Values that equal the
+     user's own profile (CGPA, batch year) are still flagged (labeled "profile value").
+   - **Changes after the first real run** (run 1 kept in `evals/results/agent_run1/`): search_jobs adds
+     `name_matches` (jobs whose title/company contains a query word; hybrid search missed #1303 for "JNJ TLDP" and
+     the agent answered about the JJT Internship instead); check_eligibility adds `needs_checking`/`failed`;
+     Groq's server-side `tool_use_failed` 400 (e.g. `"full-time"`, empty query) is fed back to the model instead of
+     ending the turn; filters accept "full-time"; checker bugs fixed (digits in links read as job ids; 2027 matched
+     2026 within tolerance; graduation year labeled CGPA).
+3. **10 p00 conversations** (`python -m evals.agent_convos`, Groq openai/gpt-oss-120b; transcripts in
+   `evals/results/agent_transcripts/`, table in `evals/results/agent_p00.md`). Run 1: grounding passed 3/10 (5 false
+   flags from the checker bugs, 2 turns ended by Groq 400s, 1 real profile-value flag), 42,987 tokens. Run 2:
+   **9/10 passed**; c05 failed only on "2027" (the user's own batch year, not in a tool output); 47,749 tokens.
+   **What the checker does not catch** (found by reading all 10): c03 lists "needs checking: CGPA, experience,
+   degree" for Elip, but compare_jobs returns only the verdict (invented rule list; "experience" actually passes);
+   c07 says none of the postings mention a fee, but search_jobs returns trust levels, not red flags, and it looked at
+   5 jobs, not "your matches"; c04 turn 2 lists 5 jobs without their verdicts (3 INELIGIBLE); c08's explain_match
+   was skipped by the app's daily token budget (300K, counted over all models including today's Gemini extraction,
+   2.48M) and the answer does not say so; c05/c09 recommend senior-coded roles ([IC4], [IC3]) and a role listed for
+   EST/Europe. c02 (JNJ TLDP), c06, c10 (no Google job, says so) are correct.
+
+## Not started: P7.

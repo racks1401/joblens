@@ -1,0 +1,399 @@
+{
+ "conversations": [
+  {
+   "id": "c01",
+   "ran": true,
+   "messages": [
+    "best internships for me in Bengaluru"
+   ],
+   "grounded": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [
+       539,
+       1279,
+       772
+      ],
+      "numbers_checked": [],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": [],
+      "only_profile_values_flagged": false
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs",
+      "check_eligibility"
+     ],
+     "tokens": {
+      "in": 3997,
+      "out": 488,
+      "total": 4485
+     }
+    }
+   ]
+  },
+  {
+   "id": "c02",
+   "ran": true,
+   "messages": [
+    "am I eligible for JNJ TLDP"
+   ],
+   "grounded": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [
+       1303
+      ],
+      "numbers_checked": [
+       "7.5",
+       "7.96"
+      ],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": [],
+      "only_profile_values_flagged": false
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs",
+      "get_job",
+      "check_eligibility"
+     ],
+     "tokens": {
+      "in": 5818,
+      "out": 239,
+      "total": 6057
+     }
+    }
+   ]
+  },
+  {
+   "id": "c03",
+   "ran": true,
+   "messages": [
+    "compare Elip and Rubrik"
+   ],
+   "grounded": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [
+       1295,
+       1125
+      ],
+      "numbers_checked": [
+       "\u20b975,000",
+       "6",
+       "5",
+       "8.0"
+      ],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": [],
+      "only_profile_values_flagged": false
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs",
+      "compare_jobs"
+     ],
+     "tokens": {
+      "in": 3942,
+      "out": 304,
+      "total": 4246
+     }
+    }
+   ]
+  },
+  {
+   "id": "c04",
+   "ran": true,
+   "messages": [
+    "remember that I prefer Bengaluru",
+    "now show me software jobs for freshers"
+   ],
+   "grounded": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [],
+      "numbers_checked": [],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": [],
+      "only_profile_values_flagged": false
+     },
+     "stop": null,
+     "tools": [
+      "remember"
+     ],
+     "tokens": {
+      "in": 2011,
+      "out": 87,
+      "total": 2098
+     }
+    },
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [
+       76,
+       61,
+       1261,
+       350,
+       1270
+      ],
+      "numbers_checked": [],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": [],
+      "only_profile_values_flagged": false
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs"
+     ],
+     "tokens": {
+      "in": 2420,
+      "out": 304,
+      "total": 2724
+     }
+    }
+   ]
+  },
+  {
+   "id": "c05",
+   "ran": true,
+   "messages": [
+    "any remote data science or machine learning roles for a 2027 graduate?"
+   ],
+   "grounded": false,
+   "turns": [
+    {
+     "grounding": {
+      "ok": false,
+      "job_ids_checked": [
+       1031,
+       1237
+      ],
+      "numbers_checked": [
+       "2027"
+      ],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [
+       {
+        "value": "2027",
+        "kind": "other",
+        "context": "nce / machine\u2011learning roles (2027 graduate)**",
+        "in_profile": true
+       }
+      ],
+      "jobs_named_without_id": [],
+      "only_profile_values_flagged": true
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs",
+      "check_eligibility",
+      "check_eligibility"
+     ],
+     "tokens": {
+      "in": 6344,
+      "out": 406,
+      "total": 6750
+     }
+    }
+   ]
+  },
+  {
+   "id": "c06",
+   "ran": true,
+   "messages": [
+    "what does the Elip software engineer job pay, and what is the deadline?"
+   ],
+   "grounded": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [
+       1295
+      ],
+      "numbers_checked": [
+       "\u20b975,000"
+      ],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": [],
+      "only_profile_values_flagged": false
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs",
+      "get_job"
+     ],
+     "tokens": {
+      "in": 3942,
+      "out": 176,
+      "total": 4118
+     }
+    }
+   ]
+  },
+  {
+   "id": "c07",
+   "ran": true,
+   "messages": [
+    "do any of my matches look risky or ask for a fee?"
+   ],
+   "grounded": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [],
+      "numbers_checked": [],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": [],
+      "only_profile_values_flagged": false
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs",
+      "search_jobs"
+     ],
+     "tokens": {
+      "in": 2557,
+      "out": 140,
+      "total": 2697
+     }
+    }
+   ]
+  },
+  {
+   "id": "c08",
+   "ran": true,
+   "messages": [
+    "find my top match and explain why it fits me"
+   ],
+   "grounded": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [
+       539
+      ],
+      "numbers_checked": [
+       "92"
+      ],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": [],
+      "only_profile_values_flagged": false
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs",
+      "check_eligibility",
+      "explain_match"
+     ],
+     "tokens": {
+      "in": 5737,
+      "out": 321,
+      "total": 6058
+     }
+    }
+   ]
+  },
+  {
+   "id": "c09",
+   "ran": true,
+   "messages": [
+    "full-time roles paying at least 50000 a month"
+   ],
+   "grounded": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [
+       1238
+      ],
+      "numbers_checked": [
+       "\u20b91,036,000",
+       "USD\u202f74,000",
+       "148,000"
+      ],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": [],
+      "only_profile_values_flagged": false
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs",
+      "search_jobs",
+      "get_job",
+      "check_eligibility"
+     ],
+     "tokens": {
+      "in": 5577,
+      "out": 344,
+      "total": 5921
+     }
+    }
+   ]
+  },
+  {
+   "id": "c10",
+   "ran": true,
+   "messages": [
+    "am I eligible for the Google SDE role?"
+   ],
+   "grounded": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [],
+      "numbers_checked": [],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": [],
+      "only_profile_values_flagged": false
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs"
+     ],
+     "tokens": {
+      "in": 2462,
+      "out": 133,
+      "total": 2595
+     }
+    }
+   ]
+  }
+ ],
+ "total_tokens": 47749
+}

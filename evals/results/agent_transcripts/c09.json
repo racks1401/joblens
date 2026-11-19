@@ -1,0 +1,229 @@
+{
+ "id": "c09",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "full-time roles paying at least 50000 a month",
+   "result": {
+    "session_id": "d421340b-ee12-4646-8c38-fff93ac9bb22",
+    "answer": "**Software Engineer - Platform [IC3], Sourcegraph (job_id: 1238)**  \nLink: https://job-boards.greenhouse.io/sourcegraph91/jobs/6103628004  \n\n- **Location:** Remote (also listed for EST/Europe)  \n- **Pay:** Approx ₹1,036,000 per month (USD 74,000 – 148,000 per year)  \n- **Eligibility:** **CHECK** – the posting does not state required degree, specialization, graduation year, or minimum CGPA, so these need to be verified. All other criteria (experience, location, pay, employment type) pass.  \n\nThe role meets your full‑time and minimum‑pay requirement, but you’ll need to confirm the missing eligibility details with the employer.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "",
+       "filters": {
+        "min_monthly_pay_inr": 50000,
+        "employment_type": "Full-time"
+       },
+       "limit": 5
+      },
+      "ms": 0.0,
+      "result_chars": 0,
+      "error": "provider rejected arguments",
+      "output": {
+       "error": "[`/query`: minLength: got 0, want 1]"
+      }
+     },
+     {
+      "step": 1,
+      "tool": "search_jobs",
+      "args": {
+       "query": "software engineer",
+       "filters": {
+        "employment_type": "full_time",
+        "work_mode": null,
+        "location": null,
+        "min_monthly_pay_inr": 50000,
+        "fresher_only": false,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 39.8,
+      "result_chars": 483,
+      "error": null,
+      "output": {
+       "results": [
+        {
+         "job_id": 1238,
+         "title": "Software Engineer - Platform [IC3]",
+         "company": "Sourcegraph",
+         "location": "Remote",
+         "final_score": 47,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "url": "https://job-boards.greenhouse.io/sourcegraph91/jobs/6103628004"
+        },
+        {
+         "job_id": 1303,
+         "title": "TLDP (Technology Leadership Development Program)",
+         "company": "Johnson & Johnson",
+         "location": null,
+         "final_score": 10,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "url": null
+        }
+       ],
+       "name_matches": null,
+       "excluded_companies": null
+      }
+     },
+     {
+      "step": 2,
+      "tool": "get_job",
+      "args": {
+       "job_id": 1238
+      },
+      "ms": 3.6,
+      "result_chars": 785,
+      "error": null,
+      "output": {
+       "job_id": 1238,
+       "title": "Software Engineer - Platform [IC3]",
+       "company": "Sourcegraph",
+       "url": "https://job-boards.greenhouse.io/sourcegraph91/jobs/6103628004",
+       "location": "Remote",
+       "type": "full_time",
+       "work_mode": "remote",
+       "locations": [
+        "Est",
+        "Europe"
+       ],
+       "pay": {
+        "min": 74000.0,
+        "max": 148000.0,
+        "currency": "USD",
+        "period": "year",
+        "approx_inr_per_month": 1036000
+       },
+       "duration_months": null,
+       "degrees": null,
+       "branches": null,
+       "batch": null,
+       "min_cgpa": null,
+       "experience_min_years": null,
+       "required_skills": [
+        "go",
+        "public cloud platform providers (gcp, aws, azure)",
+        "terraform (or similar iac solutions)",
+        "kubernetes",
+        "debugging distributed systems",
+        "communicate clearly and empathetically"
+       ],
+       "apply_deadline": null,
+       "ppo": null,
+       "red_flags": [],
+       "trust": {
+        "score": 70,
+        "level": "ok",
+        "reasons": [
+         "Posted 133 days ago"
+        ]
+       },
+       "flags": []
+      }
+     },
+     {
+      "step": 3,
+      "tool": "check_eligibility",
+      "args": {
+       "job_id": 1238
+      },
+      "ms": 8.1,
+      "result_chars": 870,
+      "error": null,
+      "output": {
+       "job_id": 1238,
+       "title": "Software Engineer - Platform [IC3]",
+       "company": "Sourcegraph",
+       "verdict": "CHECK",
+       "needs_checking": [
+        "degree",
+        "specialization",
+        "graduation_year",
+        "cgpa"
+       ],
+       "failed": null,
+       "rules": [
+        {
+         "rule": "degree",
+         "status": "UNKNOWN",
+         "message": "Job does not state allowed degrees"
+        },
+        {
+         "rule": "specialization",
+         "status": "UNKNOWN",
+         "message": "Job does not state branches"
+        },
+        {
+         "rule": "graduation_year",
+         "status": "UNKNOWN",
+         "message": "Job does not state batch years"
+        },
+        {
+         "rule": "cgpa",
+         "status": "UNKNOWN",
+         "message": "Job does not state a minimum CGPA"
+        },
+        {
+         "rule": "experience",
+         "status": "PASS",
+         "message": "Job gives no minimum experience"
+        },
+        {
+         "rule": "location",
+         "status": "PASS",
+         "message": "Remote job; you accept remote"
+        },
+        {
+         "rule": "pay",
+         "status": "PASS",
+         "message": "You have no minimum pay set"
+        },
+        {
+         "rule": "employment_type",
+         "status": "PASS",
+         "message": "Job is full time; you want internship, full time"
+        }
+       ]
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [
+      1238
+     ],
+     "numbers_checked": [
+      "₹1,036,000",
+      "USD 74,000",
+      "148,000"
+     ],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "only_profile_values_flagged": false
+    },
+    "tokens": {
+     "in": 5577,
+     "out": 344,
+     "total": 5921
+    },
+    "llm_calls": 5,
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 58.8
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Bengaluru"
+  ]
+ }
+}
