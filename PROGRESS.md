@@ -456,4 +456,39 @@ proposal: add it as an anonymized `p00` (no name) before drafting.
   (DB unreachable). Worth re-checking with the fixed tool; 2 differ from the draft (Sarvam Embedded Data Scientist
   1 → 2, Zscaler Java 1 → 0).
 
+## Session 10 (2026-11-19) — human review, agreement, first E1 numbers
+
+1. `evals/data/retrieval_labels_reviewed.jsonl` committed: **49 human-reviewed pairs** (p00 24 + sample 25:
+   p15 8, p10 7, p09 5, p05 5), all reviewed with extracted facts shown. The stale
+   `retrieval_labels_reviewed_v1_summary_only.jsonl` is gitignored and kept local.
+2. **Agreement with the LLM drafts** (`python -m evals.agreement`, `evals/results/retrieval_agreement.md`):
+   all 46/49 exact (49/49 within ±1); p00 23/24; sample 23/25. Changed: Zscaler Java SDE (p00) 1 → 0, Stripe New Grad
+   (p09) 1 → 2, HackerRank AI Researcher Intern (p15) 1 → 0. Human reasons were not recorded by the tool. The
+   draft was visible while labeling, so agreement is likely inflated by anchoring.
+3. **E1 retrieval** (`python -m evals.e1`, `evals/results/retrieval_e1.{json,md}`; pool v4; k = 10).
+   Assumption: retrieved jobs without a label count as not relevant. **Small sample, noisy — indicative only.**
+
+   (a1) p00 — the only profile whose top-10 is fully human-labeled (no assumption used):
+
+   | Method | P@5 | P@10 | nDCG@10 | MRR |
+   |---|---|---|---|---|
+   | keyword | 0.60 | 0.60 | 0.345 | 0.333 |
+   | vector (minilm, structured) | 0.80 | 0.70 | 0.783 | 1.000 |
+   | hybrid RRF | 0.40 | 0.70 | 0.585 | 1.000 |
+
+   (a) human-reviewed only, 5 profiles (labels: p00 24, p05 5, p09 5, p10 7, p15 8): keyword nDCG@10 0.272,
+   vector 0.273, hybrid 0.266 — dominated by the assumption (30–33 of 50 top-10 slots unlabeled).
+   (b) **includes LLM drafts** (134 pairs: 49 human + 85 qwen drafts, not hand-labeled): P@5 keyword 0.56 /
+   vector 0.52 / hybrid 0.44; nDCG@10 0.446 / 0.468 / 0.463; MRR 0.267 / 0.350 / 0.383.
+4. **Batch-year check (proposal only, nothing re-extracted):** 4 in-scope jobs have a batch year; 3 are genuine
+   (Canonical "2026 and 2027 Graduate…", Rubrik "graduating in 2027/28", Rubrik "2027 graduates of …"); 1 is a
+   degree-completion deadline read as a batch: Stripe New Grad (#1270) "obtained by summer 2027" → [2027], which
+   makes 2025/2026 graduates INELIGIBLE (hidden). No in-scope batch currently comes from internship/joining dates.
+   Proposed: (1) prompt rule (next prompt version): a deadline such as "obtained by summer 2027", "complete your
+   degree before …", "no later than …" is not a batch list → graduation_years null; (2) code guard, no LLM: after
+   extraction, null graduation_years when its evidence matches deadline wording (obtained by / by <season|month> /
+   complete(d) by|before / no later than / prior to start) or a job/internship date without a batch word, and log it.
+   With the current schema (a list of years) "≤ 2027" cannot be stored, so the honest result is null → eligibility
+   UNKNOWN (CHECK), not FAIL. Effect today: 1 job (Stripe #1270).
+
 ## Not started: P5, P6, P7.
