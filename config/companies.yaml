@@ -349,3 +349,96 @@
   source: ashby
   token: lightdash
   country_hint: REMOTE
+# Round 2 (2026-11-19, scripts/verify_more_companies.py): HTTP 200 and >= 1 fresher-relevant India/remote job(s).
+- name: Harvey
+  source: ashby
+  token: harvey
+  country_hint: REMOTE
+- name: Airwallex
+  source: ashby
+  token: airwallex
+  country_hint: IN
+- name: Atlys
+  source: ashby
+  token: atlys
+  country_hint: IN
+- name: IMC Trading
+  source: greenhouse
+  token: imc
+  country_hint: IN
+- name: Glean
+  source: greenhouse
+  token: gleanwork
+  country_hint: IN
+- name: Navan
+  source: greenhouse
+  token: tripactions
+  country_hint: IN
+- name: Zeta Global
+  source: greenhouse
+  token: zetaglobal
+  country_hint: IN
+- name: Tower Research
+  source: greenhouse
+  token: towerresearchcapital
+  country_hint: IN
+- name: Wiz
+  source: greenhouse
+  token: wizinc
+  country_hint: IN
+- name: Snowflake
+  source: ashby
+  token: snowflake
+  country_hint: IN
+- name: Together AI
+  source: greenhouse
+  token: togetherai
+  country_hint: IN
+- name: Pocket FM
+  source: lever
+  token: pocketfm
+  country_hint: REMOTE
+- name: Sourcegraph
+  source: greenhouse
+  token: sourcegraph91
+  country_hint: REMOTE
+- name: Sigma Computing
+  source: greenhouse
+  token: sigmacomputing
+  country_hint: REMOTE
+- name: Ema
+  source: ashby
+  token: ema
+  country_hint: IN
+- name: Agoda
+  source: greenhouse
+  token: agoda
+  country_hint: IN
+- name: Netlify
+  source: greenhouse
+  token: netlify
+  country_hint: REMOTE
+- name: Coupang
+  source: greenhouse
+  token: coupang
+  country_hint: IN
+- name: Handshake
+  source: ashby
+  token: handshake
+  country_hint: IN
+- name: Commvault
+  source: greenhouse
+  token: commvault
+  country_hint: IN
+- name: Smallest AI
+  source: ashby
+  token: smallest
+  country_hint: IN
+- name: DigitalOcean
+  source: greenhouse
+  token: digitalocean98
+  country_hint: IN
+- name: Sierra
+  source: ashby
+  token: sierra
+  country_hint: REMOTE

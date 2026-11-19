@@ -37,3 +37,24 @@ def test_min_years() -> None:
     assert min_years_required("2+ years experience; ideally 5+ years of experience") == 2
     assert min_years_required("founded 10+ years ago") is None  # no 'experience' nearby
     assert min_years_required("") is None
+
+
+def test_cap_counts_only_fresher_jobs() -> None:
+    from datetime import UTC, datetime
+
+    from app.config import get_settings
+    from app.ingest.run import select_jobs
+    from app.schemas import NormalizedJob
+
+    s = get_settings()
+    s.cfg.ingest.max_jobs_per_company = 2
+
+    def nj(i: str, title: str) -> NormalizedJob:
+        return NormalizedJob(source="lever", source_job_id=i, company="C", title=title, location_raw="Pune, India",
+                             description_text="Build things.", fetched_at=datetime(2026, 11, 1, tzinfo=UTC))
+
+    jobs = [nj("1", "Senior Engineer"), nj("2", "Staff Engineer"), nj("3", "Software Engineer Intern"),
+            nj("4", "Graduate Engineer"), nj("5", "Principal Engineer"), nj("6", "Junior Developer")]
+    kept = {j.source_job_id for j in select_jobs(jobs, s, known_ids={"1", "2"})}
+    # stored senior 1,2 are refreshed but take no slot; 2 fresher slots go to new fresher jobs; new senior 5 is not added
+    assert kept == {"1", "2", "3", "4"}

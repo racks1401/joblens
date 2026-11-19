@@ -68,7 +68,9 @@ def select_jobs(jobs: list[NormalizedJob], s: Settings, known_ids: set[str] | No
 
     oldest = datetime.min.replace(tzinfo=UTC)
     new.sort(key=lambda j: (not india(j), -(j.posted_at or oldest).timestamp(), j.source_job_id))
-    return known + new[: max(0, cfg.max_jobs_per_company - len(known))]
+    # The cap counts fresher-relevant jobs only: stored senior rows are refreshed but take no slot.
+    known_fresher = sum(1 for j in known if classify(j.title, j.description_text)[0])
+    return known + new[: max(0, cfg.max_jobs_per_company - known_fresher)]
 
 
 def active_ids(session: Session, source: str, company: str) -> set[str]:
