@@ -228,3 +228,19 @@ def test_paste_title_must_be_in_posting_and_paste_stays_in_scope(session) -> Non
     job = session.get(Job, row.id)
     assert job.title == "Title unknown" and job.role_family == "other"
     assert job.in_scope is True  # pasted jobs skip the role-family filter
+
+
+@pytest.mark.parametrize("pay,ev,expected", [
+    (Money(min=15.65, max=15.65, currency="INR", period="year"), "1. CTC: 15.65 LPA", (1565000, "INR", "year")),
+    (Money(min=15.52, max=15.52, currency="LPA", period="year"), "CTC: 15.52 LPA", (1552000, "INR", "year")),
+    (Money(min=1.5, max=1.5, currency=None, period=None), "Pay: 1.5 lakh a month", (150000, "INR", "month")),
+    (Money(min=6, max=8, currency="INR", period="year"), "6-8 lakhs per annum", (600000, "INR", "year")),
+    (Money(min=75000, max=75000, currency="INR", period="month"), "₹75k a month", (75000, "INR", "month")),
+    (Money(min=1200000, max=1200000, currency="INR", period="year"), "12,00,000 per annum (12 LPA)", (1200000, "INR", "year")),
+])
+def test_normalize_lakh_pay(pay: Money, ev: str, expected: tuple) -> None:
+    from app.extract.facts import normalize_lakh_pay
+
+    f = normalize_lakh_pay(JobFacts(title="T", pay=Evidenced(value=pay, evidence=ev)))
+    assert (f.pay.value.min, f.pay.value.currency, f.pay.value.period) == expected
+    assert f.pay.evidence == ev  # quote untouched

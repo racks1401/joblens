@@ -160,6 +160,29 @@ def check_evidence(facts: JobFacts, text: str) -> tuple[JobFacts, list[str]]:
     return facts, dropped
 
 
+_LAKH = re.compile(r"(?i)\b(?:LPA|L\.P\.A\.?|lakhs?|lacs?)\b")
+_LAKH_MONTH = re.compile(r"(?i)\b(?:lakhs?|lacs?)\b\s*(?:per|a|/)\s*(?:month|mo)\b")
+
+
+def normalize_lakh_pay(facts: JobFacts) -> JobFacts:
+    """Indian pay stated in lakhs ("15.65 LPA", "1.5 lakh a month") -> full INR amounts, in code.
+
+    Only when the pay evidence quote itself says LPA/lakh and the numbers are lakh-sized (< 1000), so a
+    figure already in rupees is never multiplied. The evidence quote is left unchanged.
+    """
+    m, ev = facts.pay.value, facts.pay.evidence or ""
+    if m is None or not _LAKH.search(ev):
+        return facts
+    vals = [v for v in (m.min, m.max) if v is not None]
+    if not vals or max(vals) >= 1000:
+        return facts
+    m.min = None if m.min is None else round(m.min * 100_000)
+    m.max = None if m.max is None else round(m.max * 100_000)
+    m.currency = "INR"
+    m.period = "month" if _LAKH_MONTH.search(ev) else "year"
+    return facts
+
+
 def normalize_facts(facts: JobFacts) -> JobFacts:
     """Skills via synonym map, degree codes, title-cased locations, normalized specializations."""
     def uniq(xs: list[Any]) -> list[Any]:
@@ -262,6 +285,8 @@ def process_jobs(s: Session, job_ids: Sequence[int], llm: LLMClient | None = Non
             log_event(log, "facts_job_failed", level=logging.WARNING, job_id=jid, error=f"{type(e).__name__}: {str(e)[:200]}")
             out["errors"] = out.get("errors", 0) + 1
             continue  # facts left as they were, so `--stale` retries this job next time
+        if job.source == "paste":
+            r.facts = normalize_lakh_pay(r.facts)
         store_facts(s, jid, r)
         from app.ingest.role_family import classify_role
         from app.ingest.seniority import classify
