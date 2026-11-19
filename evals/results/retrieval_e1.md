@@ -13,8 +13,8 @@ Labeled pairs per profile: p00: 24, p05: 5, p09: 5, p10: 7, p15: 8 (total 49).
 | Method | P@5 | P@10 | nDCG@10 | MRR | unlabeled in top-10 |
 |---|---|---|---|---|---|
 | keyword | 0.200 | 0.180 | 0.272 | 0.142 | 33/50 |
-| vector (minilm, structured) | 0.200 | 0.180 | 0.273 | 0.200 | 30/50 |
-| hybrid RRF (keyword + minilm structured) | 0.280 | 0.220 | 0.372 | 0.273 | 33/50 |
+| vector (minilm, structured) | 0.200 | 0.180 | 0.273 | 0.200 | 31/50 |
+| hybrid RRF (keyword + minilm structured) | 0.280 | 0.200 | 0.362 | 0.269 | 33/50 |
 
 #### (a1) p00 only, human labels (24 labeled pairs)
 
@@ -22,7 +22,7 @@ Labeled pairs per profile: p00: 24, p05: 5, p09: 5, p10: 7, p15: 8 (total 49).
 |---|---|---|---|---|---|
 | keyword | 0.600 | 0.600 | 0.345 | 0.333 | 0/10 |
 | vector (minilm, structured) | 0.800 | 0.700 | 0.783 | 1.000 | 0/10 |
-| hybrid RRF (keyword + minilm structured) | 0.800 | 0.700 | 0.628 | 1.000 | 1/10 |
+| hybrid RRF (keyword + minilm structured) | 0.800 | 0.600 | 0.592 | 1.000 | 1/10 |
 
 One profile, 10 results per method: a sanity check, not a deciding set.
 
@@ -34,6 +34,6 @@ Labeled pairs per profile: p00: 24, p05: 24, p09: 29, p10: 29, p15: 28 (total 13
 
 | Method | P@5 | P@10 | nDCG@10 | MRR | unlabeled in top-10 |
 |---|---|---|---|---|---|
-| keyword | 0.560 | 0.520 | 0.446 | 0.267 | 0/50 |
-| vector (minilm, structured) | 0.520 | 0.460 | 0.468 | 0.350 | 0/50 |
-| hybrid RRF (keyword + minilm structured) | 0.680 | 0.540 | 0.519 | 0.423 | 6/50 |
+| keyword | 0.560 | 0.520 | 0.449 | 0.267 | 1/50 |
+| vector (minilm, structured) | 0.560 | 0.440 | 0.459 | 0.350 | 2/50 |
+| hybrid RRF (keyword + minilm structured) | 0.680 | 0.520 | 0.511 | 0.419 | 6/50 |
