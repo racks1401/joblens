@@ -183,6 +183,38 @@ def normalize_lakh_pay(facts: JobFacts) -> JobFacts:
     return facts
 
 
+_BATCH_DEADLINE = re.compile(
+    r"(?i)\bobtain(?:ed)?\s+by\b|\bcomplet\w*\s+(?:(?:your|the|their|a)\s+)?(?:degree\s+|studies\s+|graduation\s+)?"
+    r"(?:by|before)\b|\bno later than\b|\bby\s+(?:the\s+)?(?:summer|spring|fall|autumn|winter|end of)\b|"
+    r"\b(?:prior to|before)\s+(?:the\s+)?start\b")
+_BATCH_WORD = re.compile(r"(?i)\bbatch\b|\bgraduat\w*|\bclass of\b|\bpass[- ]?outs?\b|\bpassing out\b|\balumni\b")
+_MONTH = (r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|"
+          r"oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)")
+_JOB_DATE = re.compile(r"(?i)\b(?:join\w*|start\w*|internship|tenure|duration|commenc\w*|onboard\w*)\b|"
+                       r"\b" + _MONTH + r"\.?\s+(?:\d{1,2},?\s+)?20\d\d\b|\b" + _MONTH + r"\s+(?:to|-|–)\s+" + _MONTH + r"\b")
+
+
+def guard_batch_years(facts: JobFacts) -> tuple[JobFacts, str | None]:
+    """Clear graduation_years when its quote is not a batch list (no LLM):
+    - degree-completion deadline wording ("obtained by summer 2027", "complete your degree before ...",
+      "no later than", "by summer"): anyone graduating by then qualifies, which a year list cannot express;
+    - a job/internship date ("January to June 2027", "Joining: June 2027") with no batch word.
+    Returns (facts, reason or None)."""
+    g = facts.graduation_years
+    if not g.value or not g.evidence:
+        return facts, None
+    ev = g.evidence
+    reason = None
+    if _BATCH_DEADLINE.search(ev):
+        reason = "degree-completion deadline, not a batch"
+    elif _JOB_DATE.search(ev) and not _BATCH_WORD.search(ev):
+        reason = "job/internship date, not a batch"
+    if reason:
+        log_event(log, "batch_years_cleared", level=logging.WARNING, value=g.value, evidence=ev[:120], reason=reason)
+        facts.graduation_years = Evidenced()
+    return facts, reason
+
+
 def normalize_facts(facts: JobFacts) -> JobFacts:
     """Skills via synonym map, degree codes, title-cased locations, normalized specializations."""
     def uniq(xs: list[Any]) -> list[Any]:
@@ -288,6 +320,7 @@ def process_jobs(s: Session, job_ids: Sequence[int], llm: LLMClient | None = Non
             continue  # facts left as they were, so `--stale` retries this job next time
         if job.source == "paste":
             r.facts = normalize_lakh_pay(r.facts)
+        r.facts, _ = guard_batch_years(r.facts)
         store_facts(s, jid, r)
         from app.ingest.role_family import classify_role
         from app.ingest.seniority import classify

@@ -244,3 +244,23 @@ def test_normalize_lakh_pay(pay: Money, ev: str, expected: tuple) -> None:
     f = normalize_lakh_pay(JobFacts(title="T", pay=Evidenced(value=pay, evidence=ev)))
     assert (f.pay.value.min, f.pay.value.currency, f.pay.value.period) == expected
     assert f.pay.evidence == ev  # quote untouched
+
+
+@pytest.mark.parametrize("ev,cleared", [
+    ("obtained by summer 2027", True),
+    ("Bachelor's degree, to be completed by June 2027", True),
+    ("You must complete your degree before July 2027", True),
+    ("graduating no later than 2027", True),
+    ("Duration: 6 months (January to June 2027)", True),
+    ("Joining: June 2027 (Post educational curriculum completion)", True),
+    ("We are hiring 2026 and 2027 Graduate Software Engineers", False),
+    ("graduating in 2027/28", False),
+    ("- 2027 graduates of Circuital branches only", False),
+    ("2026 batch students may apply", False),
+    ("Class of 2027, internship starts May 2027", False),  # has a batch word
+])
+def test_guard_batch_years(ev: str, cleared: bool) -> None:
+    from app.extract.facts import guard_batch_years
+
+    f, reason = guard_batch_years(JobFacts(title="T", graduation_years=Evidenced(value=[2027], evidence=ev)))
+    assert (f.graduation_years.value is None) is cleared and (reason is not None) is cleared
