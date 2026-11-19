@@ -22,6 +22,7 @@ from app.ingest import ashby, greenhouse, lever
 from app.ingest.common import FetchResult
 from app.ingest.http import PoliteClient
 from app.ingest.normalize import location_matches
+from app.ingest.seniority import classify
 from app.ingest.store import upsert_company
 from app.logs import log_event, setup_logging
 from app.schemas import CompanyCfg, NormalizedJob
@@ -56,9 +57,10 @@ def select_jobs(jobs: list[NormalizedJob], s: Settings, known_ids: set[str] | No
     known_ids = known_ids or set()
     kept = [j for j in jobs if j.title and j.description_text and location_matches(j.location_raw, cfg)]
     if not cfg.max_jobs_per_company:
-        return kept
+        return [j for j in kept if j.source_job_id in known_ids or classify(j.title, j.description_text)[0]]
     known = [j for j in kept if j.source_job_id in known_ids]
-    new = [j for j in kept if j.source_job_id not in known_ids]
+    # New jobs: only fresher-relevant ones are added (senior roles already stored are kept, marked).
+    new = [j for j in kept if j.source_job_id not in known_ids and classify(j.title, j.description_text)[0]]
 
     def india(j: NormalizedJob) -> bool:
         loc = (j.location_raw or "").lower()

@@ -23,6 +23,16 @@ T0 = datetime(2026, 11, 1, tzinfo=UTC)
 GH = "https://boards-api.greenhouse.io/v1/boards/"
 
 
+@pytest.fixture(autouse=True)
+def _all_fresher(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests cover upsert/activity logic; seniority has its own tests (test_seniority.py)."""
+    import app.ingest.run as run_mod
+    import app.ingest.store as store_mod
+
+    monkeypatch.setattr(run_mod, "classify", lambda t, d: (True, "test"))
+    monkeypatch.setattr(store_mod, "classify", lambda t, d: (True, "test"))
+
+
 def gh_payload() -> dict:
     return json.loads((FIXTURES / "greenhouse_board.json").read_text(encoding="utf-8"))["payload"]
 

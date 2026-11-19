@@ -9,6 +9,7 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from app.ingest.normalize import content_hash, norm_key
+from app.ingest.seniority import classify
 from app.models import Job, JobFactsRow
 from app.schemas import NormalizedJob
 
@@ -44,6 +45,7 @@ def upsert_job(s: Session, nj: NormalizedJob, now: datetime, window_days: int = 
             posted_at=nj.posted_at, first_seen_at=now, last_seen_at=now, is_active=True,
             repost_count=_repost_count(s, nj, now, window_days),
         )
+        row.is_fresher_relevant, row.seniority_reason = classify(nj.title, nj.description_text)
         s.add(row)
         s.flush()
         return row, "new"
@@ -52,6 +54,7 @@ def upsert_job(s: Session, nj: NormalizedJob, now: datetime, window_days: int = 
     row.posted_at = nj.posted_at or row.posted_at
     if row.content_hash != h:
         row.company, row.title, row.description_text, row.content_hash = nj.company, nj.title, nj.description_text, h
+        row.is_fresher_relevant, row.seniority_reason = classify(nj.title, nj.description_text)
         # Facts extracted from the old text no longer have evidence in the new text: drop them so the
         # job is re-extracted (pipeline step, or `python -m app.pipeline --stale` later).
         s.execute(delete(JobFactsRow).where(JobFactsRow.job_id == row.id))
@@ -68,7 +71,7 @@ def upsert_company(s: Session, source: str, company: str, jobs: list[NormalizedJ
     for nj in jobs:
         row, kind = upsert_job(s, nj, now, window_days)
         setattr(st, kind, getattr(st, kind) + 1)
-        if kind != "unchanged":
+        if kind != "unchanged" and row.is_fresher_relevant:
             st.to_process.append(row.id)
     # Deactivate only jobs that are no longer on the board. A job still on the board but not selected
     # this run (filters/cap) keeps its state. on_board=None means "everything fetched was passed in".

@@ -48,6 +48,8 @@ class Job(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, server_default="true", default=True)
     repost_count: Mapped[int] = mapped_column(Integer, server_default="0", default=0)
     search_text: Mapped[str | None] = mapped_column(Text)
+    is_fresher_relevant: Mapped[bool] = mapped_column(Boolean, server_default="true", default=True)
+    seniority_reason: Mapped[str | None] = mapped_column(Text)
     fts: Mapped[Any] = mapped_column(
         TSVECTOR,
         Computed("to_tsvector('english', coalesce(search_text, title || ' ' || description_text))", persisted=True),

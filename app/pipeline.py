@@ -74,6 +74,7 @@ def main() -> None:
                     help="only jobs whose facts came from a different model or prompt version (resumable)")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--chunk", type=int, default=25)
+    ap.add_argument("--include-senior", action="store_true", help="also process jobs marked not fresher-relevant")
     args = ap.parse_args()
     st = get_settings()
     model = get_llm("extract").model
@@ -83,6 +84,7 @@ def main() -> None:
     india = case((Job.location_raw.op("~*")("|".join(st.cfg.ingest.india_keywords)), 0), else_=1)
     with session_factory()() as s:
         q = (select(Job.id).where(Job.is_active.is_(True))
+             .where(Job.is_fresher_relevant.is_(True) if not args.include_senior else Job.id.is_not(None))
              .outerjoin(JobFactsRow, JobFactsRow.job_id == Job.id)
              .order_by(priority, india, Job.id))
         if args.stale:

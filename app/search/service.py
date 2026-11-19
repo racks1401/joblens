@@ -84,7 +84,8 @@ def load_jobs(s: Session, ids: Sequence[int]) -> dict[int, Loaded]:
 
 
 def retrieve(s: Session, query_text: str, keyword_query: str, mode: Mode, model: str | None = None,
-             variant: str | None = None, limit: int | None = None) -> list[tuple[int, float]]:
+             variant: str | None = None, limit: int | None = None,
+             include_senior: bool = False) -> list[tuple[int, float]]:
     """Candidate ids with a 0..1 retrieval score. Keyword scores are divided by the max ts_rank_cd."""
     st = get_settings().cfg
     model = model or st.embeddings.default_model
@@ -93,9 +94,9 @@ def retrieve(s: Session, query_text: str, keyword_query: str, mode: Mode, model:
     kw: list[tuple[int, float]] = []
     vec: list[tuple[int, float]] = []
     if mode in ("keyword", "hybrid"):
-        kw = keyword_search(s, keyword_query, n)
+        kw = keyword_search(s, keyword_query, n, include_senior)
     if mode in ("vector", "hybrid"):
-        vec = vector_search(s, get_embedder(model).embed_query(query_text), model, variant, n)
+        vec = vector_search(s, get_embedder(model).embed_query(query_text), model, variant, n, include_senior)
     if mode == "keyword":
         mx = max((x[1] for x in kw), default=1.0) or 1.0
         return [(j, sc / mx) for j, sc in kw]
@@ -158,10 +159,11 @@ def _item(loaded: Loaded, retrieval: float, profile: Profile | None, show_inelig
 
 
 def match(s: Session, profile: Profile, limit: int = 20, show_ineligible: bool = False,
-          filters: Filters | None = None, mode: Mode = "hybrid") -> list[MatchItem]:
+          filters: Filters | None = None, mode: Mode = "hybrid", include_senior: bool = False) -> list[MatchItem]:
     """Ranked matches for a profile."""
     n = get_settings().cfg.search.candidates * (4 if filters and filters.active() else 1)
-    cands = retrieve(s, build_profile_query_text(profile), profile_keyword_query(profile), mode, limit=n)
+    cands = retrieve(s, build_profile_query_text(profile), profile_keyword_query(profile), mode, limit=n,
+                     include_senior=include_senior)
     loaded = load_jobs(s, [j for j, _ in cands])
     items = [it for j, sc in cands if j in loaded
              if (it := _item(loaded[j], sc, profile, show_ineligible, filters)) is not None]
@@ -170,12 +172,13 @@ def match(s: Session, profile: Profile, limit: int = 20, show_ineligible: bool =
 
 
 def search(s: Session, q: str, mode: Mode = "hybrid", model: str | None = None, variant: str | None = None,
-           limit: int = 20, filters: Filters | None = None, profile: Profile | None = None) -> dict[str, Any]:
+           limit: int = 20, filters: Filters | None = None, profile: Profile | None = None,
+           include_senior: bool = False) -> dict[str, Any]:
     """Free-text search. With a profile, results carry eligibility and use the final score."""
     t0 = time.perf_counter()
     n = get_settings().cfg.search.candidates * (4 if filters and filters.active() else 1)
     kwq = " OR ".join(x for x in re.split(r"\s*,\s*", q) if x) if "," in q else q
-    cands = retrieve(s, q, kwq, mode, model, variant, limit=n)
+    cands = retrieve(s, q, kwq, mode, model, variant, limit=n, include_senior=include_senior)
     loaded = load_jobs(s, [j for j, _ in cands])
     items = [it for j, sc in cands if j in loaded
              if (it := _item(loaded[j], sc, profile, True, filters)) is not None]
