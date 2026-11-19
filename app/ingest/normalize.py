@@ -149,6 +149,35 @@ def text_location_phrases(text: str) -> list[str]:
     return out
 
 
+# Time-zone / region working-hours limits ("EST or Europe time zones", "must work US hours", "PST overlap").
+# Abbreviations are case-sensitive and need a time word nearby; IST / UTC+5:30 / India never restrict.
+_TZ_ABBR = r"(?:EST|EDT|PST|PDT|CST|CDT|MST|MDT|ET|PT|CET|CEST|BST|AEST|AEDT|NZST)"
+TIMEZONE_LIMITS = [
+    re.compile(r"\b" + _TZ_ABBR + r"\b(?:\s*(?:/|or|and|,)\s*" + _TZ_ABBR + r"\b)*[^.\n]{0,30}?"
+               r"\b(?:[Tt]ime\s?[Zz]ones?|[Hh]ours|[Oo]verlap|[Ww]orking|[Bb]usiness)"),
+    re.compile(r"\b(?:[Tt]ime\s?[Zz]ones?|[Hh]ours|[Oo]verlap\w*|[Ww]ork(?:ing)?|[Bb]ased)\b[^.\n]{0,30}?\b" + _TZ_ABBR + r"\b"),
+    re.compile(r"(?i)\b(?:us|u\.s\.|north american?|american|european|europe|emea|americas|latam|eastern|pacific|"
+               r"central european|uk)\s+(?:time\s?zones?|working hours|business hours|hours)\b"),
+    re.compile(r"(?i)\btime\s?zones?\s+(?:in|of|within|across)\s+(?:the\s+)?(?:us|u\.s\.|europe|emea|americas|"
+               r"north america|latam|uk)\b"),
+]
+_INDIA_TZ = re.compile(r"(?i)\bIST\b|utc\s*\+\s*5[:.]?30|\bgmt\s*\+\s*5[:.]?30|\bindia\b")
+
+
+def timezone_limit(text: str) -> str | None:
+    """A phrase limiting a remote role to non-India time zones or regions, or None.
+
+    None when the posting also names India or an Indian time zone anywhere (e.g. "IST or EST overlap")."""
+    t = text or ""
+    if _INDIA_TZ.search(t):
+        return None
+    for rx in TIMEZONE_LIMITS:
+        m = rx.search(t)
+        if m:
+            return m.group(0).strip()[:80]
+    return None
+
+
 def text_location_check(text: str, cfg: IngestCfg) -> tuple[bool, str] | None:
     """For an 'open remote' board listing: does the posting text limit it to other countries?
 

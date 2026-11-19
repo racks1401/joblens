@@ -111,3 +111,20 @@ def test_eligibility_uses_text_only_for_open_remote() -> None:
     assert _eligibility("Bengaluru, India", "Location: Remote (US)")[0] is True  # board India location wins
     assert _eligibility("Remote", "Build things.") == (True, "open remote")
     assert _eligibility(None, "Location: Remote (US)")[0] is True  # pasted job
+
+
+@pytest.mark.parametrize("text,limited", [
+    ("You should be able to overlap with EST for at least 20 hours a week.", True),
+    ("We hire in European time zones only.", True),
+    ("Candidates must be in US time zones.", True),
+    ("Remote within Americas timezones.", True),
+    ("Work PST hours.", True),
+    ("We have teams in every time zone.", False),
+    ("Overlap with IST or EST working hours.", False),
+    ("Remote across India; some overlap with PST hours.", False),
+    ("Established in 2010, we value ownership.", False),
+])
+def test_timezone_limit(text: str, limited: bool) -> None:
+    from app.ingest.normalize import timezone_limit
+
+    assert (timezone_limit(text) is not None) is limited

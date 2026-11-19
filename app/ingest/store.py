@@ -39,7 +39,7 @@ def _eligibility(location: str | None, description: str | None = None) -> tuple[
     """Board location first; for an 'open remote' listing, location phrases in the posting text can
     restrict it ("Location: Remote (US)")."""
     from app.config import get_settings
-    from app.ingest.normalize import india_eligibility, text_location_check
+    from app.ingest.normalize import india_eligibility, text_location_check, timezone_limit
 
     if location is None:  # pasted jobs have no ATS location; the user decides
         return True, "no ATS location (pasted job)"
@@ -49,6 +49,9 @@ def _eligibility(location: str | None, description: str | None = None) -> tuple[
         res = text_location_check(description, cfg)
         if res is not None and not res[0]:
             return res
+        tz = timezone_limit(description)
+        if tz:
+            return False, f"posting limits time zone/region: {tz}"
     return ok, why
 
 
