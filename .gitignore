@@ -12,3 +12,4 @@ data/private/
 models/*.joblib
 models/fastembed/
 *.log
+data/pasted/
