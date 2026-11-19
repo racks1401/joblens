@@ -86,15 +86,15 @@ def table(title: str, res: dict[str, Any], labels: dict[str, dict[str, int]], no
 
 
 def fully_labeled(res: dict[str, Any], labels: dict[str, dict[str, int]]) -> str:
-    """Per-profile rows for profiles whose top-10 is fully labeled for every method (no assumption used)."""
-    full = [p for p in labels if all(r["per_profile"][p]["unlabeled_in_top10"] == 0 for r in res.values())]
-    if not full:
-        return "(No profile has a fully human-labeled top-10.)\n"
-    rows = [[f"{p} — {m}", r["per_profile"][p]["p@5"], r["per_profile"][p]["p@10"], r["per_profile"][p]["ndcg@10"],
-             r["per_profile"][p]["mrr"]] for p in full for m, r in res.items()]
-    return (f"#### (a1) Profiles whose top-10 is fully human-labeled: {', '.join(full)} (no unlabeled-as-0 assumption)\n\n"
-            + md_table(["Profile — method", "P@5", "P@10", "nDCG@10", "MRR"], rows)
-            + "\n\nOne profile, 10 results per method: indicative only.\n")
+    """Per-method rows for the profile with the most human labels (p00), with its unlabeled count."""
+    if not labels:
+        return ""
+    p = max(labels, key=lambda x: len(labels[x]))
+    rows = [[m, r["per_profile"][p]["p@5"], r["per_profile"][p]["p@10"], r["per_profile"][p]["ndcg@10"],
+             r["per_profile"][p]["mrr"], f"{r['per_profile'][p]['unlabeled_in_top10']}/{K}"] for m, r in res.items()]
+    return (f"#### (a1) {p} only, human labels ({len(labels[p])} labeled pairs)\n\n"
+            + md_table(["Method", "P@5", "P@10", "nDCG@10", "MRR", "unlabeled in top-10"], rows)
+            + "\n\nOne profile, 10 results per method: a sanity check, not a deciding set.\n")
 
 
 def main() -> None:
@@ -116,8 +116,9 @@ def main() -> None:
         def ranked(pid: str, m: str) -> list[str]:
             if (pid, m) not in cache:
                 p, c = profiles[pid], ms[m]
+                # Same candidate depth as production /matches (search.candidates per list), then cut to K.
                 hits = retrieve(s, build_profile_query_text(p), profile_keyword_query(p), c["mode"], c["model"],
-                                c["variant"], limit=K)
+                                c["variant"], limit=get_settings().cfg.search.candidates)
                 cache[(pid, m)] = [keys[j] for j, _ in hits][:K]
             return cache[(pid, m)]
 
