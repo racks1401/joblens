@@ -10,10 +10,13 @@ Source of truth: `docs/JobLens_Project_Spec.pdf` (v1.0). Phases follow spec Sect
 - Stand-in for local runs/tests: `scripts/devdb.py` starts Postgres 16 + pgvector 0.6.2 from the
   `pgserver` pip package (dev-only, not in requirements.txt) on 127.0.0.1:54329. DB tests use it
   (`joblens_test` db) or `TEST_DATABASE_URL`; they skip if no DB is reachable.
-- Python 3.12.16 venv in `.venv` (created with uv). The interpreter lives in a temp folder on this
-  machine, so recreate the venv if it breaks: `uv venv --python 3.12 .venv`.
-- **No `.env` / LLM key was present.** Everything runs on the offline fake LLM client
-  (`LLM_PROVIDER` resolves to `fake`; model name `fake-heuristic`). See each phase for what this means.
+- Python 3.12.16 venv in `.venv`, on a permanent interpreter at `C:\Users\racks\.uv-python` (moved off
+  the temp folder on 2026-11-19; full suite re-run on it).
+- Start the dev DB from a normal shell with its output redirected to a file
+  (`.venv\Scripts\python.exe scripts\devdb.py start > devdb.log`). Piping its output hangs (the server keeps
+  the pipe open); starting it from a hidden window makes Postgres child processes crash (0xC0000142).
+- Session 1 had no LLM key (offline fake client, `fake-heuristic`). Session 2 added a Groq key: see below.
+  Tests always run offline (conftest forces the fake LLM and fake embedder).
 
 ## P0 Setup — done (Docker unverified)
 
@@ -142,5 +145,71 @@ Finish: `python -m app.pipeline --steps search --all`.
 Additions: empty `preferred_locations` = no location preference (PASS); Delhi NCR cities treated as one
 group; approximate FX table for the pay rule; `eligible_only` filter excludes INELIGIBLE only.
 
-## Not started: P4 (metrics.py + tests and evals/data/profiles.jsonl are written; runner, pool,
-## guidelines and drafts are not), P5, P6, P7.
+## Session 2 (2026-11-19)
+
+### Step 1 — permanent venv ✔
+`.venv` rebuilt on Python 3.12.16 at `C:\Users\racks\.uv-python`; full suite re-run (110 passed then, 124 now).
+
+### Step 2 — real LLM (Groq): infrastructure ✔, full re-extraction PARTIAL (daily quota)
+- The key had been pasted into `.env.example` (tracked). It was never committed; it is now only in `.env`
+  (gitignored) and `.env.example` is back to the blank template. Config strips stray spaces/quotes around
+  `.env` values (the key had a leading space).
+- Groq's live model list (`scripts/list_models.py`) no longer has the Llama models from the old defaults.
+  Chosen: extract/explain `openai/gpt-oss-20b` with `reasoning_effort: low` (reasoning tokens 1046 → 179 in
+  a probe), agent `openai/gpt-oss-120b`, judge + draft labeler `qwen/qwen3.8-27b` (different family).
+  **`.env` still pins the old Llama/Gemini names — blank those lines (NEEDS_RAVI §1).** Runs this session
+  used process env overrides.
+- Limits (headers + the provider's own 429 message): 8,000 tokens/min, 1,000 requests/day and
+  **200,000 tokens/day per model**. One extraction ≈ 3–3.7k tokens → ~55 jobs/day → ~18 days for all jobs
+  on the free tier.
+- Added: shared tokens-per-minute pacer, 429 retry-after handling, clean stop on the daily limit
+  (`DailyLimitReached`), Groq `json_validate_failed` → invalid attempt (retry path), and
+  `python -m app.pipeline --stale` (resumable; fresher-relevant titles and India jobs first).
+- Evidence checker fixes, found by inspecting drops (both keep the no-unsupported-value rule): ignore our
+  own `- ` list markers; accept `...`-joined quotes only when every fragment is verbatim.
+- **Results so far, `gpt-oss-20b` + `facts_v1`: 45 jobs extracted, 45/45 schema-valid (100%),
+  49 evidence drops** (pilot 20 jobs: 17 drops; resumed run 25 jobs: 32 drops). Most drops are
+  required/nice-to-have skills: the model writes long "quotes" (350–720 chars) that silently skip clauses,
+  and these are correctly rejected. The run stopped at the daily cap
+  (`TPD Limit 200000, Used 197680`); 920 jobs still have heuristic facts. Resume tomorrow with `--stale`.
+- facts_v2 (one contiguous span ≤200 chars) on the pilot 20: 20/20 valid, 16 drops, 118 non-null fields
+  kept vs 104 for v1. Not adopted: without gold labels the extra values may be right or hallucinated; E2 decides.
+
+### Step 3 — gitignore + profile from resume ✔ (your review needed)
+`.env`, `data/private/`, `data/raw/*` are ignored (checked with `git check-ignore`). Resume file is
+`data/private/Ravi_Kumar_Prabudh_AIML_with_Experience.pdf` (not `resume.pdf`). Draft from `gpt-oss-20b`:
+`data/private/profile_draft.json`. Saved to the dev DB (id in `data/private/profile_saved.json`); target
+roles, locations, work modes and employment types are **provisional, from the spec's 11.2 example**,
+because the resume does not state them. `experience_years` = 0 (only part-time work listed).
+
+### Step 4 — cap fix ✔
+Jobs are marked inactive only when gone from the board (full listing, not the capped selection); the cap
+applies to new jobs only; changed content deletes stale `job_facts`. Live re-ingest: 87/87 boards,
+7 deactivated (removed from boards), 5 new, 25 changed. Regression tests added.
+
+### Step 5 — live /matches ✔ (quality poor until re-extraction lands)
+Top 10 for the saved profile were mostly senior/lead roles: those jobs still had heuristic facts that
+missed "N years" requirements, so the experience rule passed. Two real internships were #9–10.
+
+### P4 eval harness ✔ (E1/E2); labels are drafts awaiting review
+- `evals/run.py` (`--suite retrieval|extraction|all`, `--labels gold|drafts`, `--report`), `evals/metrics.py`
+  (hand-checked tests), `evals/pool.py`, `evals/guidelines.md`, `evals/draft_labels.py`, `GET /evals/latest`.
+  E3–E6 are registered as "not built yet (P5/P6)".
+- Pool `evals/data/retrieval_pool.jsonl`: 847 pairs, 15 profiles, union of top-20 from M1–M5, shuffled,
+  methods/scores hidden.
+- Retrieval drafts (`evals/data/drafts/retrieval_labels_draft.jsonl`, qwen, 15 jobs per call, `"status":
+  "draft"` + reason each): **complete, 847/847 pairs, 0 failures**, 64 calls, 158,087 tokens
+  (121,190 in / 36,897 out, ~187 per pair), 36 min. Distribution: 713 × 0, 118 × 1, 16 × 2. Few 2s because
+  the ATS boards are dominated by senior roles. The harness was run once on these drafts to check it
+  works end to end (`--labels drafts`, output bannered DRAFT); those numbers were not kept or committed.
+  Scope check requested on 2026-11-19: at 553/847 pairs, 100,162 tokens (~186/pair), ETA ~13 min
+  (< 30 min threshold), so the full-scope job was left running rather than reduced. Drafting is resumable
+  (skips pairs already in the draft file). Note: drafting (qwen) and extraction (gpt-oss-20b) did run at the
+  same time for ~20 min earlier. Groq's limits appear to be per model (the 429 names
+  `openai/gpt-oss-20b`; qwen's counter was separate), so they did not compete for tokens. Still, from now on
+  only one LLM job runs at a time.
+- Extraction drafts: not started (qwen's remaining daily quota is used by the retrieval drafts).
+- 10 synthetic Indian-style paste posts in `evals/data/drafts/paste_jobs_synthetic.jsonl` (marked synthetic).
+- No gold files exist yet, so there are **no real E1/E2 numbers** in this repo.
+
+## Not started: P5, P6, P7.
