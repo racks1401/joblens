@@ -491,4 +491,36 @@ proposal: add it as an anonymized `p00` (no name) before drafting.
    With the current schema (a list of years) "≤ 2027" cannot be stored, so the honest result is null → eligibility
    UNKNOWN (CHECK), not FAIL. Effect today: 1 job (Stripe #1270).
 
-## Not started: P5, P6, P7.
+## Session 11 (2026-11-19)
+
+1. **Batch-year guard** (code, no LLM; `guard_batch_years` in `app/extract/facts.py`): after extraction,
+   graduation_years → null when its quote is degree-deadline wording ("obtained by", "complete … by/before",
+   "no later than", "by summer") or a job/internship date without a batch word. Applied to stored in-scope facts:
+   4 checked, **1 changed — Stripe #1270** ("obtained by summer 2027"). p09 (2025 graduate) for Stripe:
+   INELIGIBLE → CHECK. `facts_v5` = facts_v4 + the deadline rule, set as `prompts.facts_paste` (pasted/future
+   only; board jobs stay on facts_v3, nothing re-extracted; the 6 pasted jobs keep facts_v4 facts until a
+   `--stale` run, 6 Gemini calls).
+2. **p00 hybrid vs vector (diagnosis only):** top-10 label sums vector 13, hybrid 10, keyword 7. Causes: the
+   keyword query ORs 12 broad skill terms, so ts_rank_cd ranks long postings with many skill words first (keyword
+   #1/#2 are both human 0), and RRF gives keyword rank 1 the same weight as vector rank 1 (100ms "AI Engineer", label
+   0, keyword 1 / vector 8 → hybrid #2); 3 of the 7 relevance-2 jobs never appear in keyword's top 50, so they get one
+   RRF vote and drop out of hybrid's top 10. **E1 bug found:** the runner fused 10 candidates per list, production
+   fuses 50, so E1's hybrid row did not measure the production hybrid. What-if on p00 (depth 50): nDCG@10 hybrid
+   0.628 (keyword weight 1.0), 0.646 (0.5), 0.607 (0.25) vs vector 0.783 — no clear weight fix. Proposed (not
+   applied): fix the E1 depth; review the keyword query (role terms to match, skills to boost — a spec deviation)
+   or make the matches mode configurable with vector as default until more profiles are labeled.
+3. **P5 trust** (`app/trust/{rules,ghost,classifier,score}.py`, `ml/train_scam_classifier.py`, pipeline step
+   "trust", 10 tests). Rules: money request, WhatsApp/Telegram-only contact, free-email recruiter, unrealistic pay,
+   missing company/URL; ghost: age > 60 / > 120 days, reposts; classifier delta −round(40 × p). Only rules can mark
+   scam signals. **Classifier** (Kaggle EMSCAD 2012–2014, 17,880 rows, 4.8% fraud, 60% US / 13% GB / 1.5% IN) on the
+   held-out test split (1,788 rows, 87 fraud), threshold 0.51 chosen on validation: **precision 0.959, recall 0.816,
+   F1 0.882, PR-AUC 0.907, recall@precision≥0.8 0.851. Not validated on our Indian/ATS postings.** Model file
+   `models/scam_clf.joblib` is local (gitignored); report in `evals/results/trust_classifier.md`.
+   Trust on 119 in-scope jobs: 118 ok, 1 caution (100ms "Benefit Verification Specialist", posted 447 days ago);
+   board scam_prob median 0.001, max 0.052; no scam rule fired on any real job. Pasted jobs: Elip 90 ok,
+   SpectoVX 89 ok, JNJ pieces 86–88 ok — only "missing company" (no URL; no company name for the JNJ pieces) and
+   small classifier deltas. Synthetic scam drafts (written by Claude, in memory only): rules flagged both
+   scam-style posts; the classifier gave the Indian "training fee + guaranteed placement" post only 0.07.
+   E6 (30 hand-collected Indian examples) is still pending.
+
+## Not started: P6, P7.
