@@ -343,4 +343,35 @@ proposal: add it as an anonymized `p00` (no name) before drafting.
   title and one set of facts per job, so a 4-role post would become one job. Proposed fix (awaiting approval):
   split such posts into one job per role, with the shared header (CGPA, branches) copied into each.
 
+## Session 6 (2026-11-19)
+
+1. `data/pasted/` is gitignored.
+2. **Paste title fix:** a "Company: X" line becomes the company and is never the title; headers, headings and
+   bullets are skipped; pasted jobs are extracted without a guessed title and `JobFacts.title` becomes the job
+   title. Elip → "Software Engineer", engineering, in scope, **rank 3 in your matches (score 53)**. SpectoVX →
+   "Intern" (the post has no role title, only "Tracks: AI | App | Web"), role family other, still out of scope.
+   New issue found in step 4: the extracted title is not evidence-checked, and for JNJ the model invented
+   "Johnson & Johnson Hiring" (not in the post).
+3. **Prompt `facts_v3`** = facts_v1 + two rules (batch only from graduation/pass-out phrases; "all
+   specializations welcome" → ["all"]); now the configured prompt. SpectoVX before → after: graduation_years
+   [2027] (from "January to June 2027") → null; specializations null → ["all"]. Other jobs keep facts_v1 facts
+   until a `--stale` re-run (~160 Gemini calls; not started).
+4. **JNJ multi-role post** (4 roles: 3 headed — JJT Internship, TLDP, Product Engineer — and one unheaded PG-only
+   internship): one job (1297). Extracted the JJT Internship's type, stipend (₹75k) and tenure; kept the shared
+   CGPA 7.5, Hyderabad, deadline. Lost TLDP (full-time, 15.65 LPA) and Product Engineer (15.52 LPA) and the
+   4th role's PG-only rule. Merged/misread: degrees [MTECH, MCA] from an "Under Graduate & Post Graduate"
+   sentence (drops UG), specializations = shared branches ∪ "like …" examples (incl. "mca"). Company empty (no
+   "Company:" line). Your eligibility: CHECK (degree, branch, CGPA 7.5 ≤ 7.96 pass; Hyderabad soft-fail; batch
+   unknown). **Proposed fix (not implemented):** split a multi-role post into one pasted job per role, the
+   shared header and footer copied verbatim into each; split points chosen by an LLM that returns only line
+   numbers, so every piece is verbatim original text; an unheaded block is flagged for you rather than guessed.
+5. **Seniority misses:** 47 of 156 in-scope jobs. Causes: (A) "X+ years in/building …" without "experience"
+   nearby; (B) the minimum of all numbers is used ("5+ years …, at least 2 years in X" → 2); (C) numeric levels
+   (Engineer 2/3, SDE2, SDE II, SDE - 3) not covered; (D) years in the title not checked; (E) Gemini's evidenced
+   `experience_min_years` not used. **Proposed fix (not applied):** years phrasing without "experience", first
+   requirement instead of the minimum, title level ≥ 3 = senior, years check on the title, and after extraction
+   `experience_min_years` ≥ 3 → not fresher-relevant. Expected effect: in scope ~156 → ~109 (below 150).
+6. **p00 drafts printed for review** (23): 7 × 2, 5 × 1, 11 × 0. Flagged: Wikimedia ("location is US"; it is
+   remote) and Zscaler (0 for location only; guidelines cap a location mismatch at 1). No labels changed.
+
 ## Not started: P5, P6, P7.
