@@ -38,15 +38,31 @@ def job_out(s: Session, job: Job, include_text: bool = True) -> JobOut:
 @router.post("/jobs/paste", response_model=JobOut)
 def paste_job(body: PasteJobIn, s: Session = Depends(get_session)) -> JobOut:
     """Add a pasted job and run it through the same pipeline as ingested jobs."""
+    from app.ingest.split import split_post
+    from app.llm.client import get_llm
     from app.pipeline import process_jobs
 
     nj = from_paste(body.text, body.url, body.company)
-    row, kind = upsert_job(s, nj, datetime.now(UTC))
-    s.commit()
-    if kind != "unchanged" or s.get(JobFactsRow, row.id) is None:
-        process_jobs(s, [row.id])
-    s.refresh(row)
-    return job_out(s, row)
+    # A post listing several roles becomes one pasted job per role (original lines, shared header/footer copied).
+    pieces = split_post(nj.description_text, get_llm("extract"))
+    njs = [nj]
+    if pieces:
+        njs = []
+        for p in pieces:
+            pj = from_paste(p.text, body.url, nj.company or body.company)
+            njs.append(pj.model_copy(update={"title": p.title,
+                                             "source_job_id": f"role{p.index}-{nj.source_job_id}"}))
+    rows = []
+    for one in njs:
+        row, kind = upsert_job(s, one, datetime.now(UTC))
+        s.commit()
+        if kind != "unchanged" or s.get(JobFactsRow, row.id) is None:
+            process_jobs(s, [row.id])
+        s.refresh(row)
+        rows.append(row)
+    out = job_out(s, rows[0])
+    out.related_job_ids = [r.id for r in rows[1:]]
+    return out
 
 
 @router.get("/jobs/{job_id}", response_model=JobOut)

@@ -266,7 +266,8 @@ def process_jobs(s: Session, job_ids: Sequence[int], llm: LLMClient | None = Non
         from app.ingest.role_family import classify_role
         from app.ingest.seniority import classify
 
-        if job.source == "paste" and job.title != NEEDS_HUMAN_TITLE:
+        # Split pieces ("role<N>-..." ids) keep the splitter's title: the heading line or "Needs human title".
+        if job.source == "paste" and not job.source_job_id.startswith("role") and job.title != NEEDS_HUMAN_TITLE:
             # Accept the extracted role only if it is written in the posting; never invent a title.
             t = (r.facts.title or "").strip() if r.valid else ""
             job.title = t[:200] if t and norm_for_match(t) in norm_for_match(job.description_text) else TITLE_UNKNOWN

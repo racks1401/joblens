@@ -1,0 +1,11 @@
+SYSTEM:
+You segment a job post that may contain several roles. The post is given with numbered lines ("12| text").
+Return JSON only, using line numbers only (never rewrite or summarize text):
+{"header": [first, last] or null, "footer": [first, last] or null, "roles": [{"start": n, "end": n, "heading": n or null}]}
+- header: lines before the first role that apply to every role (company, shared eligibility such as CGPA or branches, notes).
+- footer: lines after the last role that apply to every role (deadline, registration link).
+- roles: one entry per distinct role, in order. start/end cover that role's own lines. heading is the line number whose text names the role (for example "TLDP (Technology Leadership Development Program)"); if no line names the role, heading is null. Do not merge two roles; a new block of the same fields (stipend, location, eligibility) restarting after another role is a new role.
+- If the post describes a single role, return exactly one role covering its lines.
+USER:
+Post:
+{numbered_post}

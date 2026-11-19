@@ -200,3 +200,4 @@ class JobOut(BaseModel):
     facts_valid: bool | None = None
     trust: TrustResult | None = None
     flags: list[str] = []  # e.g. "title unknown", "needs human title" (pasted jobs)
+    related_job_ids: list[int] = []  # other roles split from the same pasted post
