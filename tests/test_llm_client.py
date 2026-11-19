@@ -39,10 +39,10 @@ def test_parse_json_text_variants() -> None:
 
 def test_budget_blocks_only_non_essential() -> None:
     cache = MemoryCache()
-    cache.put("k", "m", "v", {"content": "x"}, 500, 500)
+    cache.put("k", "m", "explain_v1", {"content": "x"}, 500, 500)  # same purpose ("explain") as the call below
     llm = LLMClient(FakeProvider(), "fake", cache, daily_token_budget=1000)
     with pytest.raises(BudgetExceeded):
-        llm.chat([{"role": "user", "content": "q"}], prompt_version="explain_x", essential=False)
+        llm.chat([{"role": "user", "content": "q"}], prompt_version="explain_v2", essential=False)
     assert llm.chat([{"role": "user", "content": "q"}], prompt_version="other").content == "OK"
 
 

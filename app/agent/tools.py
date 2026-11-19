@@ -106,6 +106,7 @@ class ToolContext:
     memory: dict[str, Any]
     explain_llm: Any = None
     tokens: dict[str, int] = field(default_factory=lambda: {"in": 0, "out": 0})
+    skipped: list[dict[str, Any]] = field(default_factory=list)  # explanations skipped this turn
 
 
 @dataclass
@@ -140,20 +141,42 @@ def _load(s: Session, job_id: int) -> tuple[Job | None, JobFacts | None, TrustSc
     return job, (JobFacts.model_validate(fr.facts) if fr else None), s.get(TrustScore, job_id)
 
 
-def _trust(t: TrustScore | None) -> dict[str, Any] | None:
+RULE_CODES = {"money", "offplatform", "free_email", "unrealistic_pay", "missing_company"}
+GHOST_CODES = {"age_60", "age_120", "repost"}
+
+
+def trust_block(t: TrustScore | None, f: JobFacts | None) -> dict[str, Any]:
+    """Trust level plus the scam rules and ghost-job signals that fired. Empty lists mean "checked, none fired";
+    null means trust was not computed for this job."""
+    flags = [r.value for r in f.red_flags] if f else []
     if t is None:
-        return None
-    return {"score": t.score, "level": t.level,
-            "reasons": [r["message"][:90] for r in t.reasons if r.get("code") != "classifier"]}
+        return {"level": None, "score": None, "scam_rules_fired": None, "ghost_signals": None,
+                "posting_red_flags": flags, "note": "trust not computed for this job"}
+    return {"level": t.level, "score": t.score,
+            "scam_rules_fired": [{"code": r["code"], "message": r["message"][:90]} for r in t.reasons
+                                 if r.get("code") in RULE_CODES],
+            "ghost_signals": [{"code": r["code"], "message": r["message"][:90]} for r in t.reasons
+                              if r.get("code") in GHOST_CODES],
+            "posting_red_flags": flags}
+
+
+def elig_block(e: Any) -> dict[str, Any]:
+    return {"eligibility": e.verdict,
+            "needs_checking": [r.rule for r in e.rules if r.status in ("UNKNOWN", "SOFT_FAIL")],
+            "failed": [r.rule for r in e.rules if r.status == "FAIL"]}
 
 
 def _pay(f: JobFacts) -> dict[str, Any] | None:
     m = f.pay.value
     if m is None:
         return None
-    inr = monthly_inr(m, f.duration_months.value)
-    return {"min": m.min, "max": m.max, "currency": m.currency, "period": m.period,
-            "approx_inr_per_month": round(inr) if inr is not None else None}
+    out: dict[str, Any] = {"min": m.min, "max": m.max, "currency": m.currency, "period": m.period}
+    if (m.currency or "INR").upper() == "INR":
+        inr = monthly_inr(m, f.duration_months.value)
+        out["inr_per_month"] = round(inr) if inr is not None else None
+    else:  # never shown as a rupee monthly figure: the role may not be open to India at this pay
+        out["note"] = f"pay is in {m.currency}, not converted to INR"
+    return out
 
 
 def job_card(job: Job, f: JobFacts | None, t: TrustScore | None) -> dict[str, Any]:
@@ -165,7 +188,7 @@ def job_card(job: Job, f: JobFacts | None, t: TrustScore | None) -> dict[str, An
         "degrees": f.degrees_allowed.value, "branches": f.specializations.value, "batch": f.graduation_years.value,
         "min_cgpa": f.min_cgpa.value, "experience_min_years": f.experience_min_years.value,
         "required_skills": (f.required_skills.value or [])[:8], "apply_deadline": f.apply_deadline.value,
-        "ppo": f.ppo_or_conversion.value, "red_flags": [r.value for r in f.red_flags], "trust": _trust(t),
+        "ppo": f.ppo_or_conversion.value, "trust": trust_block(t, f),
         "flags": [job.title.lower()] if job.title in ("Title unknown", "Needs human title") else [],
     }
 
@@ -201,11 +224,16 @@ def search_jobs(ctx: ToolContext, a: SearchJobsArgs) -> dict[str, Any]:
     avoid = [str(c) for c in ctx.memory.get("avoid_companies") or []]
     flt = Filters(**a.filters.model_dump(), exclude_companies=avoid)
     res = search(ctx.session, a.query, "hybrid", limit=a.limit, filters=flt, profile=ctx.profile)
-    rows = [{"job_id": r.job_id, "title": r.title, "company": r.company or None,
-             "location": r.location_raw, "final_score": r.final_score,
-             "eligibility": r.eligibility.verdict if r.eligibility else None,
-             "trust_level": r.trust.level if r.trust else None, "url": r.url}
-            for r in res["results"]]
+    rows = []
+    for r in res["results"]:
+        tb = trust_block(ctx.session.get(TrustScore, r.job_id), None)
+        rows.append({"job_id": r.job_id, "title": r.title, "company": r.company or None,
+                     "location": r.location_raw, "final_score": r.final_score,
+                     "eligibility": r.eligibility.verdict if r.eligibility else None,
+                     "trust_level": tb["level"],
+                     "scam_rules_fired": None if tb["scam_rules_fired"] is None else [x["code"] for x in tb["scam_rules_fired"]],
+                     "ghost_signals": None if tb["ghost_signals"] is None else [x["code"] for x in tb["ghost_signals"]],
+                     "url": r.url})
     seen = {r["job_id"] for r in rows}
     names = []
     for j in name_matches(ctx.session, a.query, avoid):
@@ -213,9 +241,14 @@ def search_jobs(ctx: ToolContext, a: SearchJobsArgs) -> dict[str, Any]:
             continue
         _, f, t = _load(ctx.session, j.id)
         e = check_eligibility(ctx.profile, f or JobFacts(title=j.title))
+        tb = trust_block(t, None)
         names.append({"job_id": j.id, "title": j.title, "company": j.company or None, "location": j.location_raw,
-                      "eligibility": e.verdict, "trust_level": t.level if t else None, "url": j.url})
-    return {"results": rows, "name_matches": names or None, "excluded_companies": avoid or None}
+                      "eligibility": e.verdict, "trust_level": tb["level"],
+                      "scam_rules_fired": None if tb["scam_rules_fired"] is None else [x["code"] for x in tb["scam_rules_fired"]],
+                      "ghost_signals": None if tb["ghost_signals"] is None else [x["code"] for x in tb["ghost_signals"]],
+                      "url": j.url})
+    return {"jobs_returned": len(rows) + len(names), "results": rows, "name_matches": names or None,
+            "excluded_companies": avoid or None}
 
 
 def get_job(ctx: ToolContext, a: JobIdArgs) -> dict[str, Any]:
@@ -230,9 +263,9 @@ def check_job_eligibility(ctx: ToolContext, a: JobIdArgs) -> dict[str, Any]:
     if job is None:
         return {"error": f"no job with id {a.job_id}"}
     e = check_eligibility(ctx.profile, f or JobFacts(title=job.title))
+    b = elig_block(e)
     return {"job_id": job.id, "title": job.title, "company": job.company or None, "verdict": e.verdict,
-            "needs_checking": [r.rule for r in e.rules if r.status in ("UNKNOWN", "SOFT_FAIL")] or None,
-            "failed": [r.rule for r in e.rules if r.status == "FAIL"] or None,
+            "needs_checking": b["needs_checking"], "failed": b["failed"],
             "rules": [{"rule": r.rule, "status": r.status, "message": r.message} for r in e.rules]}
 
 
@@ -244,6 +277,9 @@ def explain(ctx: ToolContext, a: JobIdArgs) -> dict[str, Any]:
         return {"error": f"no job with id {a.job_id}"}
     out = explain_match(ctx.session, ctx.profile_id, ctx.profile, job, f or JobFacts(title=job.title), t,
                         ctx.explain_llm, ctx.tokens)
+    if "error" in out:
+        ctx.skipped.append({"job_id": job.id, "reason": out["error"]})
+        return {"job_id": job.id, "title": job.title, "explanation_skipped": True, "reason": out.pop("error")}
     return {"job_id": job.id, "title": job.title, **out}
 
 
@@ -257,9 +293,9 @@ def compare_jobs(ctx: ToolContext, a: CompareJobsArgs) -> dict[str, Any]:
         c = job_card(job, f, t)
         e = check_eligibility(ctx.profile, f or JobFacts(title=job.title))
         rows.append({k: c[k] for k in ("job_id", "title", "company", "type", "work_mode", "locations", "pay",
-                                       "duration_months", "min_cgpa", "experience_min_years", "required_skills")}
-                    | {"eligibility": e.verdict, "trust_level": (c["trust"] or {}).get("level")})
-    return {"jobs": rows}
+                                       "duration_months", "min_cgpa", "experience_min_years", "required_skills",
+                                       "trust")} | elig_block(e))
+    return {"jobs_compared": len(rows), "jobs": rows}
 
 
 def remember(ctx: ToolContext, a: RememberArgs) -> dict[str, Any]:

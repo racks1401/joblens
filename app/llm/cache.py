@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
@@ -29,7 +30,12 @@ class CacheStore(Protocol):
         self, key: str, model: str, prompt_version: str, response: dict[str, Any], tokens_in: int, tokens_out: int
     ) -> None: ...
 
-    def tokens_today(self) -> int: ...
+    def tokens_today(self, purpose: str | None = None) -> int: ...
+
+
+def purpose_of(prompt_version: str) -> str:
+    """Budget purpose of a call: the prompt name without its version ("agent_v1" -> "agent")."""
+    return re.sub(r"_v\d+$", "", prompt_version or "")
 
 
 class MemoryCache:
@@ -37,7 +43,7 @@ class MemoryCache:
 
     def __init__(self) -> None:
         self.rows: dict[str, dict[str, Any]] = {}
-        self._tokens: dict[str, int] = {}
+        self._tokens: dict[tuple[str, str], int] = {}
 
     def get(self, key: str) -> dict[str, Any] | None:
         row = self.rows.get(key)
@@ -47,11 +53,12 @@ class MemoryCache:
         self, key: str, model: str, prompt_version: str, response: dict[str, Any], tokens_in: int, tokens_out: int
     ) -> None:
         self.rows[key] = {"model": model, "prompt_version": prompt_version, "response": response}
-        day = datetime.now(UTC).date().isoformat()
-        self._tokens[day] = self._tokens.get(day, 0) + tokens_in + tokens_out
+        k = (datetime.now(UTC).date().isoformat(), purpose_of(prompt_version))
+        self._tokens[k] = self._tokens.get(k, 0) + tokens_in + tokens_out
 
-    def tokens_today(self) -> int:
-        return self._tokens.get(datetime.now(UTC).date().isoformat(), 0)
+    def tokens_today(self, purpose: str | None = None) -> int:
+        day = datetime.now(UTC).date().isoformat()
+        return sum(v for (d, p), v in self._tokens.items() if d == day and (purpose is None or p == purpose))
 
 
 class DBCache:
@@ -76,10 +83,12 @@ class DBCache:
             s.execute(stmt)
             s.commit()
 
-    def tokens_today(self) -> int:
+    def tokens_today(self, purpose: str | None = None) -> int:
         start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
         with self.sf() as s:
             q = select(func.coalesce(func.sum(LLMCacheRow.tokens_in + LLMCacheRow.tokens_out), 0)).where(
                 LLMCacheRow.created_at >= start
             )
+            if purpose is not None:  # "agent" matches agent_v1, agent_v2 ... but not other prompts
+                q = q.where(LLMCacheRow.prompt_version.op("~")(f"^{re.escape(purpose)}(_v[0-9]+)?$"))
             return int(s.execute(q).scalar() or 0)

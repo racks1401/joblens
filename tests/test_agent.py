@@ -49,7 +49,7 @@ def test_job_named_without_id_flagged() -> None:
 
 
 def test_list_numbers_and_small_ints_skipped() -> None:
-    g = check_answer("Here are 3 options:\n1. Job A (job_id: 1303)\n2) none else", OUT)
+    g = check_answer("Here are 3 options:\n1. Job A (job_id: 1303) CHECK\n2) none else", OUT)
     assert g.ok and g.skipped_small_numbers == 1
 
 
@@ -198,17 +198,83 @@ def test_ungrounded_answer_is_flagged_in_turn(session) -> None:  # type: ignore[
 # ---------- fixes after the first real run ----------
 
 def test_digits_in_links_are_not_job_ids() -> None:
-    ans = ("TLDP, Johnson & Johnson (job_id: 1303) - [Apply](https://x.greenhouse.io/jobs/7723230003) "
+    ans = ("TLDP, Johnson & Johnson (job_id: 1303) CHECK - [Apply](https://x.greenhouse.io/jobs/7723230003) "
            "https://stripe.com/jobs/search?gh_jid=8130876")
     g = check_answer(ans, OUT)
     assert g.ok and g.job_ids_checked == [1303], g.to_dict()
 
 
-def test_graduation_year_near_cgpa_not_cgpa_and_profile_values_labeled() -> None:
-    g = check_answer("Your MCA (graduating 2027, CGPA 8.41) fits job_id: 1303.", OUT, {2027.0, 8.41})
-    kinds = {u["value"]: (u["kind"], u["in_profile"]) for u in g.unsupported_numbers}
-    assert kinds["2027"] == ("other", True) and kinds["8.41"] == ("cgpa", True)
-    assert not g.ok and g.only_profile_values_flagged
+def test_profile_and_user_message_values_accepted_only_if_real() -> None:
+    ans = "Your MCA (graduating 2027, CGPA 8.41) fits job_id: 1303 (CHECK)."
+    g = check_answer(ans, OUT, {2027.0, 8.41})
+    assert g.ok and not g.ok_tools_only and g.accepted_from_profile == ["2027", "8.41"]
+    g2 = check_answer(ans, OUT, {2026.0, 8.0})  # not the real profile values -> flagged
+    assert not g2.ok and {u["value"] for u in g2.unsupported_numbers} == {"2027", "8.41"}
+    g3 = check_answer("Jobs paying at least ₹50,000 a month: job_id: 1303 CHECK", OUT, set(), "pay at least 50k")
+    assert g3.ok and g3.accepted_from_user_message == ["₹50,000"]
+
+
+def test_verdict_missing_and_mismatch() -> None:
+    g = check_answer("- TLDP, Johnson & Johnson (job_id: 1303)\n- nothing else", OUT)
+    assert not g.ok and g.verdict_missing == [1303]
+    g = check_answer("- TLDP, Johnson & Johnson (job_id: 1303): ELIGIBLE", OUT)
+    assert g.verdict_mismatch == [{"job_id": 1303, "tool": "CHECK", "answer": ["ELIGIBLE"]}]
+    g = check_answer("- TLDP (job_id: 1303): CHECK; please check the batch.", OUT)
+    assert g.ok and g.verdict_mismatch == [] and g.verdict_missing == []
+
+
+def test_tool_blocks_explicit_trust_eligibility_and_pay() -> None:
+    from types import SimpleNamespace
+
+    from app.agent.tools import _pay, trust_block
+    from app.schemas import JobFacts
+
+    t = SimpleNamespace(level="ok", score=90, reasons=[{"code": "age_60", "message": "Posted 70 days ago", "delta": -15},
+                                                      {"code": "classifier", "message": "p=0.1", "delta": -4}])
+    b = trust_block(t, JobFacts(title="x"))  # type: ignore[arg-type]
+    assert b["scam_rules_fired"] == [] and b["ghost_signals"][0]["code"] == "age_60" and b["posting_red_flags"] == []
+    assert trust_block(None, None)["scam_rules_fired"] is None
+    f = JobFacts.model_validate({"title": "x", "pay": {"value": {"min": 74000, "max": 148000, "currency": "USD",
+                                                                 "period": "year"}, "evidence": "USD 74,000"}})
+    p = _pay(f)
+    assert p and p["currency"] == "USD" and "inr_per_month" not in p and "not converted" in p["note"]
+
+
+def test_budget_counts_each_purpose_separately() -> None:
+    from app.llm.client import BudgetExceeded
+    from app.llm.fake import FakeProvider
+
+    cache = MemoryCache()
+    cache.put("k1", "m", "facts_v3", {}, 900_000, 0)  # big extraction day
+    llm = LLMClient(FakeProvider(), "m", cache, daily_token_budget=1000, purpose_budgets={"agent": 50})
+    llm.chat([{"role": "user", "content": "hi"}], prompt_version="explain_v1", essential=False)  # own count only
+    assert cache.tokens_today("facts") == 900_000 and cache.tokens_today("agent") == 0
+    cache.put("k2", "m", "agent_v2", {}, 60, 0)
+    with pytest.raises(BudgetExceeded, match="'agent'"):
+        llm.chat([{"role": "user", "content": "x"}], prompt_version="agent_v2", essential=False)
+
+
+@pytest.mark.db
+def test_skipped_explanation_is_disclosed_and_compare_has_needs_checking(client, session, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    import app.explain as ex
+    from app.agent.loop import run_turn
+    from app.agent.tools import CompareJobsArgs, compare_jobs
+
+    a = client.post("/jobs/paste", json={"text": PASTE}).json()
+    b = client.post("/jobs/paste", json={"text": PASTE.replace("Example Analytics", "Other Co")}).json()
+    pid, p = _profile(session)
+    ctx = ToolContext(session=session, profile_id=pid, profile=p, memory={})
+    rows = compare_jobs(ctx, CompareJobsArgs(job_ids=[a["id"], b["id"]]))
+    assert rows["jobs_compared"] == 2
+    assert all(isinstance(r["needs_checking"], list) and "trust" in r for r in rows["jobs"])
+
+    monkeypatch.setattr(ex, "explain_match", lambda *a, **k: {"error": "Daily token budget for 'explain' reached"})
+    call = LLMResult(content=None, tool_calls=[ToolCall(id="1", name="explain_match",
+                                                        arguments=json.dumps({"job_id": a["id"]}))])
+    final = LLMResult(content=f"Data Analyst Intern, Example Analytics (job_id: {a['id']}) fits you.")
+    llm = LLMClient(_Scripted([call, final]), "m", MemoryCache())
+    r = run_turn(session, pid, p, "explain", llm=llm)
+    assert "explanation was skipped" in r["answer"] and r["explanations_skipped"][0]["job_id"] == a["id"]
 
 
 def test_filters_accept_hyphenated_values() -> None:

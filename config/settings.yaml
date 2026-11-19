@@ -16,7 +16,7 @@ providers:
   gemini:
     rpm_limit: 10                 # no rate-limit headers; conservative free-tier pacing, 429s are retried
     tpm_limit: 200000
-prompts: {facts: facts_v3, facts_paste: facts_v5, profile: profile_v1, explain: explain_v1, judge: judge_v1, agent: agent_v1}
+prompts: {facts: facts_v3, facts_paste: facts_v5, profile: profile_v1, explain: explain_v1, judge: judge_v1, agent: agent_v2}
 llm:
   timeout_s: 60
   max_retries: 2
@@ -43,7 +43,9 @@ trust:
   unrealistic_intern_pay_inr_month: 200000
   classifier_path: models/scam_clf.joblib
 agent: {max_steps: 6, history_messages: 10, summary_every: 6, tool_timeout_s: 10, temperature: 0.2}
-budget: {daily_tokens: 300000}
+budget:                          # each purpose counts only its own calls (agent never includes extraction)
+  daily_tokens: 300000           # default per purpose
+  per_purpose: {agent: 180000, summary: 20000, explain: 40000}   # Groq free tier: 200K tokens/day per model
 ingest:
   requests_per_second: 2
   timeout_s: 15

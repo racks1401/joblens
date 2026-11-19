@@ -12,6 +12,7 @@ from __future__ import annotations
 import concurrent.futures as cf
 import json
 import logging
+import re
 import uuid
 from typing import Any
 
@@ -95,7 +96,8 @@ def run_turn(s: Session, profile_id: uuid.UUID, profile: Profile, message: str, 
     llm_calls = 0
     for step in range(a.max_steps):
         try:
-            res = llm.chat_tools(messages, schemas, temperature=a.temperature, prompt_version=cfg.prompts.agent)
+            res = llm.chat_tools(messages, schemas, temperature=a.temperature, prompt_version=cfg.prompts.agent,
+                                 essential=False)  # agent budget: counts agent calls only
         except LIMIT_ERRORS as e:
             stop = f"llm_limit: {type(e).__name__}: {str(e)[:160]}"
             break
@@ -136,9 +138,13 @@ def run_turn(s: Session, profile_id: uuid.UUID, profile: Profile, message: str, 
     if answer is None:
         answer = ("I could not finish this request: " + (stop or "unknown stop") +
                   ". Nothing below is a recommendation; please try again later.")
-    pnums = {float(x) for x in (profile.cgpa, profile.graduation_year, profile.experience_years,
-                                profile.min_monthly_pay_inr) if x is not None}
-    grounding = check_answer(answer, outputs, pnums)
+    if ctx.skipped and not re.search(r"(?i)explanation[^.\n]{0,60}(skipped|unavailable|not available)", answer):
+        # Code-enforced: a skipped explanation is always disclosed.
+        answer += "\n\nNote: the match explanation was skipped (" + "; ".join(
+            f"job_id {x['job_id']}: {x['reason']}" for x in ctx.skipped) + ")."
+    p = ctx.profile
+    pnums = {float(x) for x in (p.cgpa, p.graduation_year, p.experience_years, p.min_monthly_pay_inr) if x is not None}
+    grounding = check_answer(answer, outputs, pnums, message)
     mem.save_message(s, cs.id, "assistant", {"text": answer, "tool_trace": [{k: v for k, v in t.items() if k != "output"}
                                                                           for t in trace],
                                              "grounding": grounding.to_dict(), "stop": stop})
@@ -149,4 +155,4 @@ def run_turn(s: Session, profile_id: uuid.UUID, profile: Profile, message: str, 
               tokens_out=ctx.tokens["out"], grounded=grounding.ok, stop=stop)
     return {"session_id": str(cs.id), "answer": answer, "tool_trace": trace, "grounding": grounding.to_dict(),
             "tokens": {"in": ctx.tokens["in"], "out": ctx.tokens["out"], "total": ctx.tokens["in"] + ctx.tokens["out"]},
-            "llm_calls": llm_calls, "stop": stop, "summary_refreshed": summarized, "model": llm.model}
+            "llm_calls": llm_calls, "explanations_skipped": ctx.skipped, "stop": stop, "summary_refreshed": summarized, "model": llm.model}

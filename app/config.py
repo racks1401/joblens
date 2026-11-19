@@ -118,7 +118,11 @@ class AgentCfg(BaseModel):
 
 
 class BudgetCfg(BaseModel):
-    daily_tokens: int = 300000
+    daily_tokens: int = 300000  # per purpose, unless per_purpose names one
+    per_purpose: dict[str, int] = {}  # e.g. {agent: 180000, explain: 40000}; each counts only its own calls
+
+    def for_purpose(self, purpose: str) -> int:
+        return self.per_purpose.get(purpose, self.daily_tokens)
 
 
 class IngestCfg(BaseModel):

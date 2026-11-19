@@ -34,7 +34,11 @@ class Grounding:
     unsupported_job_ids: list[int] = field(default_factory=list)
     unsupported_numbers: list[dict[str, Any]] = field(default_factory=list)
     jobs_named_without_id: list[dict[str, Any]] = field(default_factory=list)
-    only_profile_values_flagged: bool = False  # every flag is the user's own profile value (still a FAIL)
+    verdict_missing: list[int] = field(default_factory=list)  # job listed without the verdict its tool returned
+    verdict_mismatch: list[dict[str, Any]] = field(default_factory=list)  # answer states a different verdict
+    accepted_from_profile: list[str] = field(default_factory=list)  # equal to the user's real profile value
+    accepted_from_user_message: list[str] = field(default_factory=list)  # the user typed this number this turn
+    ok_tools_only: bool = True  # strict rule: profile / user-message values count as unsupported
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -88,9 +92,49 @@ def _supported(v: float, mult: float, nums: set[float], pay: bool) -> bool:
     return any(abs(c - t) <= 0.005 for c in cands for t in nums)
 
 
-def check_answer(answer: str, outputs: list[dict[str, Any]], profile_numbers: set[float] | None = None) -> Grounding:
+VERDICTS = ("ELIGIBLE", "CHECK", "INELIGIBLE")
+VERDICT_RX = re.compile(r"\b(INELIGIBLE|ELIGIBLE)\b|\bCHECK\b", re.I)
+
+
+def tool_verdicts(outputs: list[dict[str, Any]]) -> dict[int, str]:
+    """job_id -> eligibility verdict as returned by any tool this turn."""
+    out: dict[int, str] = {}
+    stack: list[Any] = list(outputs)
+    while stack:
+        x = stack.pop()
+        if isinstance(x, dict):
+            v = x.get("eligibility") if x.get("eligibility") in VERDICTS else x.get("verdict")
+            if isinstance(x.get("job_id"), int) and v in VERDICTS:
+                out[x["job_id"]] = v
+            stack.extend(x.values())
+        elif isinstance(x, list):
+            stack.extend(x)
+    return out
+
+
+def user_numbers(text: str) -> set[float]:
+    out: set[float] = set()
+    for m in NUM_RX.finditer(text or ""):
+        v = float(m.group("num").replace(",", ""))
+        out |= {v, v * MULT.get((m.group("suf") or "").strip().lower(), 1)}
+    return out
+
+
+def _verdict_found(seg: str) -> set[str]:
+    found = set()
+    for m in VERDICT_RX.finditer(seg):
+        w = m.group(0)
+        if w.upper() == "CHECK" and w != "CHECK":
+            continue  # lowercase "check" is a verb, not the verdict
+        found.add(w.upper())
+    return found
+
+
+def check_answer(answer: str, outputs: list[dict[str, Any]], profile_numbers: set[float] | None = None,
+                 user_text: str = "") -> Grounding:
     g = Grounding()
     nums, ids, text, jobs = tool_facts(outputs)
+    unums = user_numbers(user_text)
     ans = answer or ""
     stripped = re.sub(r"https?://\S+|\]\([^)]*\)", lambda m: " " * len(m.group(0)), ans)  # links are not facts
     id_spans: list[tuple[int, int]] = []
@@ -136,15 +180,36 @@ def check_answer(answer: str, outputs: list[dict[str, Any]], profile_numbers: se
         else:
             ok = _supported(v, MULT.get(suf, 1), nums, kind == "pay")
         if not ok:
-            g.unsupported_numbers.append({"value": raw, "kind": kind, "context": ans[max(0, s - 30):e + 15].strip(),
-                                          "in_profile": any(abs(v - p) < 1e-6 for p in profile_numbers or ())})
+            flag = {"value": raw, "kind": kind, "context": ans[max(0, s - 30):e + 15].strip()}
+            if any(abs(v - p) < 1e-6 for p in profile_numbers or ()):
+                g.accepted_from_profile.append(raw)
+            elif _supported(v, MULT.get(suf, 1), unums, kind == "pay"):
+                g.accepted_from_user_message.append(raw)
+            else:
+                g.unsupported_numbers.append(flag)
     low = ans.lower()
     mentioned = set(g.job_ids_checked)
     for j in jobs:
         t = j["title"].lower()
         if len(t) >= 8 and t in low and j["job_id"] not in mentioned:
             g.jobs_named_without_id.append(j)
-    g.ok = not (g.unsupported_job_ids or g.unsupported_numbers or g.jobs_named_without_id)
-    g.only_profile_values_flagged = (not g.ok and not g.unsupported_job_ids and not g.jobs_named_without_id
-                                     and all(u.get("in_profile") for u in g.unsupported_numbers))
+    # Every listed job must show the verdict its tool returned (and not a different one). The segment for a job
+    # runs from the start of the line holding its id to the start of the line holding the next id.
+    verdicts = tool_verdicts(outputs)
+    occ = sorted((sp[0], jid) for sp, jid in zip(id_spans, [int(next(x for x in m.groups() if x))
+                                                            for m in ID_RX.finditer(stripped)], strict=True))
+    starts = [stripped.rfind("\n", 0, pos) + 1 for pos, _ in occ]
+    for i, (_, jid) in enumerate(occ):
+        if jid not in verdicts or (i and occ[i - 1][1] == jid):
+            continue
+        seg = stripped[starts[i]:starts[i + 1] if i + 1 < len(occ) and starts[i + 1] > starts[i] else len(stripped)]
+        found = _verdict_found(seg)
+        if not found:
+            g.verdict_missing.append(jid)
+        elif verdicts[jid] not in found:
+            g.verdict_mismatch.append({"job_id": jid, "tool": verdicts[jid], "answer": sorted(found)})
+    base = not (g.unsupported_job_ids or g.unsupported_numbers or g.jobs_named_without_id or g.verdict_missing
+                or g.verdict_mismatch)
+    g.ok = base
+    g.ok_tools_only = base and not (g.accepted_from_profile or g.accepted_from_user_message)
     return g

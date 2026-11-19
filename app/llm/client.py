@@ -15,7 +15,7 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel
 
-from app.llm.cache import CacheStore, MemoryCache, cache_key
+from app.llm.cache import CacheStore, MemoryCache, cache_key, purpose_of
 from app.logs import log_event
 
 log = logging.getLogger("joblens.llm")
@@ -295,12 +295,14 @@ class LLMClient:
     """Cached, logged, budgeted LLM client bound to a default model."""
 
     def __init__(
-        self, provider: Provider, model: str, cache: CacheStore | None = None, daily_token_budget: int = 0
+        self, provider: Provider, model: str, cache: CacheStore | None = None, daily_token_budget: int = 0,
+        purpose_budgets: dict[str, int] | None = None,
     ) -> None:
         self.provider = provider
         self.model = model
         self.cache: CacheStore = cache or MemoryCache()
         self.daily_token_budget = daily_token_budget
+        self.purpose_budgets: dict[str, int] = dict(purpose_budgets or {})
 
     def _call(
         self,
@@ -322,9 +324,15 @@ class LLMClient:
             res = LLMResult.from_dict(hit)
             res.cached, res.latency_ms = True, (time.perf_counter() - t0) * 1000
         else:
-            if not essential and self.daily_token_budget and self.cache.tokens_today() >= self.daily_token_budget:
-                log_event(log, "llm_budget_exceeded", level=logging.WARNING, prompt_version=prompt_version)
-                raise BudgetExceeded("Daily LLM token budget reached; this optional step was skipped.")
+            purpose = purpose_of(prompt_version)
+            budget = self.purpose_budgets.get(purpose, self.daily_token_budget)
+            if not essential and budget:
+                used = self.cache.tokens_today(purpose)
+                if used >= budget:
+                    log_event(log, "llm_budget_exceeded", level=logging.WARNING, prompt_version=prompt_version,
+                              purpose=purpose, used=used, budget=budget)
+                    raise BudgetExceeded(f"Daily token budget for '{purpose}' reached ({used} of {budget} tokens); "
+                                         "this step was skipped.")
             res = self.provider.complete(
                 model=model, messages=messages, temperature=temperature, json_mode=json_mode, tools=tools,
                 task=prompt_version,
@@ -395,7 +403,8 @@ def get_llm(role: str = "extract", cache: CacheStore | None = None, model: str |
             cache = MemoryCache()
     if s.llm_provider == "fake":
         # Never persist fake outputs: the key would not change when the heuristic code changes.
-        return LLMClient(FakeProvider(), "fake-heuristic", MemoryCache(), s.cfg.budget.daily_tokens)
+        return LLMClient(FakeProvider(), "fake-heuristic", MemoryCache(), s.cfg.budget.daily_tokens,
+                         s.cfg.budget.per_purpose)
     pname = provider_for_model(model) if explicit else s.provider_for(role)
     base, key = s.provider_endpoint(pname)
     if role == "judge" and s.env.judge_api_key:
@@ -408,7 +417,7 @@ def get_llm(role: str = "extract", cache: CacheStore | None = None, model: str |
     params = {**s.cfg.llm.model_params, **(pc.model_params if pc else {})}
     prov = OpenAIProvider(key, base, s.cfg.llm.timeout_s, s.cfg.llm.max_retries, tpm=tpm, rpm=rpm,
                           model_params=params, name=pname)
-    return LLMClient(prov, model, cache, s.cfg.budget.daily_tokens)
+    return LLMClient(prov, model, cache, s.cfg.budget.daily_tokens, s.cfg.budget.per_purpose)
 
 
 class DBCacheOrMemory:
@@ -436,5 +445,5 @@ class DBCacheOrMemory:
     def put(self, key: str, model: str, pv: str, response: dict[str, Any], ti: int, to: int) -> None:
         self._try("put", key, model, pv, response, ti, to)
 
-    def tokens_today(self) -> int:
-        return int(self._try("tokens_today"))
+    def tokens_today(self, purpose: str | None = None) -> int:
+        return int(self._try("tokens_today", purpose))
