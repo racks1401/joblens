@@ -267,6 +267,9 @@ def process_jobs(s: Session, job_ids: Sequence[int], llm: LLMClient | None = Non
             job.title = r.facts.title.strip()[:200]  # the role as extracted from the posting
             job.is_fresher_relevant, job.seniority_reason = classify(job.title, job.description_text)
         job.role_family, job.role_reason = classify_role(job.title, r.facts.required_skills.value)
+        from app.ingest.seniority import apply_extracted_experience
+
+        apply_extracted_experience(job, r.facts.model_dump(mode="json"))
         s.commit()
         out["valid" if r.valid else "invalid"] += 1
         out["evidence_dropped"] += len(r.dropped)
