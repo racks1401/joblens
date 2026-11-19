@@ -103,6 +103,9 @@ def _empty(v: Any) -> bool:
 def coerce_raw(raw: dict[str, Any], title: str, company: str | None) -> dict[str, Any]:
     """Safe shape fixes before validation: wrap bare values, scalar->list, enum spellings, metadata."""
     out = dict(raw)
+    for k in ("title", "company"):  # some models wrap these plain strings as {"value", "evidence"}
+        if isinstance(out.get(k), dict):
+            out[k] = out[k].get("value")
     out["title"] = out.get("title") or title
     if not out.get("company"):
         out["company"] = company or None

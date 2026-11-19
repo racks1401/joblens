@@ -355,7 +355,17 @@ class LLMClient:
                           json_mode=False, tools=tools, essential=essential)
 
 
-def get_llm(role: str = "extract", cache: CacheStore | None = None) -> LLMClient:
+def provider_for_model(model: str) -> str:
+    """Provider that serves a model id (Gemini ids start with 'gemini'; everything else is Groq)."""
+    return "gemini" if model.startswith(("gemini", "models/gemini")) else "groq"
+
+
+def get_llm_for_model(model: str, cache: CacheStore | None = None) -> LLMClient:
+    """Client for an explicit model id on the provider that serves it (used by evals to compare models)."""
+    return get_llm("extract", cache=cache, model=model)
+
+
+def get_llm(role: str = "extract", cache: CacheStore | None = None, model: str | None = None) -> LLMClient:
     """Build the client for a role (extract | profile | explain | agent | judge) from settings.
 
     The role's provider comes from settings `role_providers` (Groq by default; extraction on Gemini).
@@ -365,7 +375,8 @@ def get_llm(role: str = "extract", cache: CacheStore | None = None) -> LLMClient
     from app.llm.fake import FakeProvider
 
     s = get_settings()
-    model = getattr(s.cfg.models, role)
+    explicit = model is not None
+    model = model or getattr(s.cfg.models, role)
     if cache is None:
         try:
             from app.db import session_factory
@@ -376,7 +387,7 @@ def get_llm(role: str = "extract", cache: CacheStore | None = None) -> LLMClient
     if s.llm_provider == "fake":
         # Never persist fake outputs: the key would not change when the heuristic code changes.
         return LLMClient(FakeProvider(), "fake-heuristic", MemoryCache(), s.cfg.budget.daily_tokens)
-    pname = s.provider_for(role)
+    pname = provider_for_model(model) if explicit else s.provider_for(role)
     base, key = s.provider_endpoint(pname)
     if role == "judge" and s.env.judge_api_key:
         key, base = s.env.judge_api_key, s.env.judge_base_url or base

@@ -203,3 +203,10 @@ def test_roles_map_to_providers(monkeypatch: pytest.MonkeyPatch) -> None:
     s = get_settings()
     assert s.provider_for("extract") == "gemini" and s.provider_for("profile") == "groq"
     assert s.provider_for("judge") == "groq" and s.provider_endpoint("gemini")[0].startswith("https://generativelanguage")
+
+
+def test_provider_for_model() -> None:
+    from app.llm.client import provider_for_model
+
+    assert provider_for_model("gemini-3.5-flash-lite") == "gemini"
+    assert provider_for_model("openai/gpt-oss-20b") == "groq" and provider_for_model("qwen/qwen3.8-27b") == "groq"

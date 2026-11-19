@@ -186,7 +186,7 @@ def score_extraction(items: list[dict[str, Any]], preds: list[dict[str, Any]], d
 
 def run_extraction(args: argparse.Namespace) -> dict[str, Any]:
     from app.extract.facts import extract_facts
-    from app.llm.client import DailyLimitReached, get_llm
+    from app.llm.client import DailyLimitReached, get_llm, get_llm_for_model
 
     path = labels_path("extraction_gold.jsonl", args.labels)
     items = read_jsonl(path)
@@ -198,13 +198,14 @@ def run_extraction(args: argparse.Namespace) -> dict[str, Any]:
     runs: dict[str, Any] = {}
     rows = []
     for model in models:
-        llm = get_llm("extract")
+        # each model on the provider that serves it (e.g. gpt-oss-20b on Groq, Gemini on Gemini)
+        llm = get_llm("extract") if st.llm_provider == "fake" else get_llm_for_model(model)
         for pv in prompts:
             preds, dropped, valid = [], [], []
             try:
                 for it in items:
                     title = it.get("title") or it["text"].split("\n", 1)[0].removeprefix("Title: ")
-                    r = extract_facts(it["text"], title, it.get("company"), llm, pv, model=model if llm.model != "fake-heuristic" else None)
+                    r = extract_facts(it["text"], title, it.get("company"), llm, pv, model=None)
                     preds.append(r.facts.model_dump(mode="json"))
                     dropped.append(len(r.dropped))
                     valid.append(r.valid)

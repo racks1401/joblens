@@ -169,3 +169,9 @@ def test_evidence_formatting_vs_real_mismatch(evidence: str, ok: bool) -> None:
             "- Highly proficient in SQL\nData pipelines. . Exposure to APIs.\nMinimum 7.0 CGPA.\n"
             "10+ years of overall experience, and 5+ years leading teams.")
     assert evidence_ok(evidence, norm_for_match(text)) is ok
+
+
+def test_coerce_unwraps_evidenced_title_company() -> None:
+    raw = {"title": {"value": "SDE Intern", "evidence": "Title: SDE Intern"}, "company": {"value": "Paytm", "evidence": "x"}}
+    f = JobFacts.model_validate(coerce_raw(raw, "fallback", None))
+    assert f.title == "SDE Intern" and f.company == "Paytm"
