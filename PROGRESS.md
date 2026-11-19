@@ -317,4 +317,30 @@ refined after extraction (title + skills). `in_scope` now = fresher-relevant AND
 call, ~19K tokens** (~187 tokens/pair measured). Your profile is not in the committed `evals/data/profiles.jsonl`;
 proposal: add it as an anonymized `p00` (no name) before drafting.
 
+## Session 5 (2026-11-19)
+
+- **Profile:** you confirmed all fields; added skills `llm evaluation`, `prompt engineering` (29 skills). Dev-DB
+  profile updated; `data/private/profile_saved.json` records the confirmation.
+- **p00** added to `evals/data/profiles.jsonl`: your profile without name or contact details.
+- **Drafts v2:** `evals/data/retrieval_pool_v2.jsonl` (5 profiles p00/p05/p09/p10/p15, tech-only in-scope pool,
+  top-10 × M1–M5 = 130 pairs; 26 reuse earlier drafts). qwen/qwen3.8-27b, batches of 13: **104/104 drafted,
+  0 failed, 10 calls, 19,784 tokens**, nothing else running. All `status: draft` with a reason.
+  p00: 7 × 2, 5 × 1, 11 × 0. Spotted while reading them: "Wikimedia… location is US" (it is remote); a
+  Hyderabad job labelled 0 for location alone (guidelines cap that at 1); and two seniority-filter leaks
+  in the pool ("Software Engineer 3", an Acceldata job asking for 4+ years).
+- **Pasted postings** (`scripts/paste_files.py`, real `POST /jobs/paste`, Gemini): `elip.txt` (job 1295) and
+  `spectovx.txt` (job 1296) extracted, valid. Problems found, not fixed yet:
+  1. `guess_title` takes the first line, so both titles are "Company: …" → role family "other" → out of scope,
+     they will not appear in matches. (Bug in paste.py.)
+  2. SpectoVX `graduation_years = [2027]` comes from "January to June 2027" (internship dates, not a batch):
+     a verbatim quote with a wrong reading, which the evidence check cannot catch. The eligibility line
+     "graduation_year PASS" rests on it.
+  3. SpectoVX "All specializations are welcome" was not extracted (`specializations` null).
+  4. Elip "on-site or remote" was extracted as `work_mode = hybrid`.
+  5. Skills come out as phrases ("python backends", "llms and agents"), so overlap with profile skills is poor.
+  Trust: not computed for either — P5 is not built.
+- **`jnj_multi_role.txt` is empty (0 bytes)**, so the multi-role case was not run. The current schema holds one
+  title and one set of facts per job, so a 4-role post would become one job. Proposed fix (awaiting approval):
+  split such posts into one job per role, with the shared header (CGPA, branches) copied into each.
+
 ## Not started: P5, P6, P7.
