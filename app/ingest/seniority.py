@@ -26,7 +26,8 @@ SENIOR_TITLE = re.compile(
 # Numeric level >= 3 after a role word: "Software Engineer 3", "SDE - 3", "Analyst 4", "L5", "Level 4".
 LEVEL_TITLE = re.compile(
     r"\b(?:engineer|developer|sde|swe|mts|scientist|analyst|consultant)\s*[-–]?\s*(?:[3-9]|iii|iv|v)\b|"
-    r"\bL[4-9]\b|\blevel\s*[3-9]\b", re.I)
+    r"\bL[4-9]\b|\blevel\s*[3-9]\b|"
+    r"\bIC\s?-?[3-9]\b", re.I)  # individual-contributor ladders: "[IC3]", "IC4", "IC-5" (IC1/IC2 stay)
 JUNIOR_TITLE = re.compile(
     r"\b(intern|internship|graduate|grad|new grad|fresher|trainee|entry[- ]level|junior|jr|apprentice|"
     r"campus|early career|university)\b", re.I)

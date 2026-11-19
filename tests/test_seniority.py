@@ -97,3 +97,15 @@ def test_extracted_experience_turns_relevance_off_only() -> None:
     noev = SimpleNamespace(title="Engineer", is_fresher_relevant=True, seniority_reason="x")
     apply_extracted_experience(noev, {"experience_min_years": {"value": 5, "evidence": None}})
     assert noev.is_fresher_relevant is True
+
+
+@pytest.mark.parametrize("title,relevant", [
+    ("ML & Agentic Systems Engineer [IC4]", False),
+    ("Software Engineer - Platform [IC3]", False),
+    ("Backend Engineer IC-5", False),
+    ("Software Engineer (L5)", False),
+    ("Software Engineer [IC2]", True),
+    ("Software Engineer - L3 Support", True),
+])
+def test_level_codes(title: str, relevant: bool) -> None:
+    assert classify(title, "")[0] is relevant
