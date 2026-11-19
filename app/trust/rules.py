@@ -71,18 +71,20 @@ def unrealistic_pay(text: str, facts: JobFacts | None, max_intern_month: int, de
     return None
 
 
-def missing_company(company: str, url: str | None, delta: int) -> TrustReason | None:
-    """No company name or no URL (spec 13)."""
-    missing = [w for w, ok in (("company name", bool(company and company.strip())), ("job URL", bool(url))) if not ok]
+def missing_company(company: str, url: str | None, delta: int, pasted: bool = False) -> TrustReason | None:
+    """No company name or no URL (spec 13). Pasted jobs have no job URL by nature, so only the company counts."""
+    checks = [("company name", bool(company and company.strip()))] + ([] if pasted else [("job URL", bool(url))])
+    missing = [w for w, ok in checks if not ok]
     if not missing:
         return None
     return TrustReason(code="missing_company", message="No " + " and no ".join(missing), delta=delta)
 
 
-def run_rules(text: str, company: str, url: str | None, facts: JobFacts | None, cfg: Any) -> list[TrustReason]:
+def run_rules(text: str, company: str, url: str | None, facts: JobFacts | None, cfg: Any,
+              pasted: bool = False) -> list[TrustReason]:
     d = cfg.deltas
     out = [money_request(text, facts, d["money"]), offplatform_only(text, url, d["offplatform"]),
            free_email(text, company, d["free_email"]),
            unrealistic_pay(text, facts, cfg.unrealistic_intern_pay_inr_month, d["unrealistic_pay"]),
-           missing_company(company, url, d["missing_company"])]
+           missing_company(company, url, d["missing_company"], pasted)]
     return [r for r in out if r]

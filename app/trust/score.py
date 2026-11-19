@@ -32,7 +32,8 @@ def compute_trust(job: Any, facts: JobFacts | None, now: datetime | None = None,
                   use_classifier: bool = True) -> TrustResult:
     cfg = get_settings().cfg.trust
     text = job.description_text or ""
-    reasons: list[TrustReason] = run_ghost(job, cfg, now) + run_rules(text, job.company or "", job.url, facts, cfg)
+    reasons: list[TrustReason] = run_ghost(job, cfg, now) + run_rules(text, job.company or "", job.url, facts, cfg,
+                                                                     pasted=getattr(job, "source", "") == "paste")
     prob = scam_probability(f"{job.title}\n{text}", model) if use_classifier else None
     if prob is not None:
         d = -round(abs(cfg.deltas["classifier_max"]) * prob)

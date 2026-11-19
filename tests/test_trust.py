@@ -90,3 +90,16 @@ def test_training_script_on_tiny_synthetic_sample() -> None:
     model, m = train(real + fake, [0] * 40 + [1] * 40, min_df=1, cv=3)
     assert m["split"]["test"] == 8 and m["test_at_val_threshold"]["f1"] == 1.0
     assert model.predict_proba(["pay registration fee whatsapp"])[0][1] > 0.5
+
+
+def test_pasted_jobs_not_penalised_for_missing_url() -> None:
+    pasted = job("Build APIs with Python.", company="Acme", url=None)
+    pasted.source = "paste"
+    t = compute_trust(pasted, None, NOW, use_classifier=False)
+    assert t.score == 100 and t.reasons == []
+    pasted.company = ""
+    t2 = compute_trust(pasted, None, NOW, use_classifier=False)
+    assert [r.message for r in t2.reasons] == ["No company name"]
+    board = job("Build APIs with Python.", company="Acme", url=None)
+    board.source = "lever"
+    assert [r.message for r in compute_trust(board, None, NOW, use_classifier=False).reasons] == ["No job URL"]
