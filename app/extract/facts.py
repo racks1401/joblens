@@ -57,32 +57,43 @@ def facts_schema_json() -> str:
     return json.dumps(JobFacts.model_json_schema(), separators=(",", ":"))
 
 
-_QUOTES = str.maketrans({"‘": "'", "’": "'", "“": '"', "”": '"', "–": "-", "—": "-",
-                         " ": " ", "•": "-"})
+_QUOTES = str.maketrans({
+    "‘": "'", "’": "'", "“": '"', "”": '"', "–": "-", "—": "-",
+    "‐": "-", "‑": "-", "‒": "-", "−": "-",  # hyphen variants
+    "­": "", " ": " ", "•": "-",
+})
+_WRAP = "\"'“”‘’`"
 
 
 def norm_for_match(s: str) -> str:
-    """Whitespace + case normalization (plus typographic quotes/dashes) for the evidence check.
+    """Normalization for the evidence check: case, whitespace, typographic quotes and dash variants,
+    and two artifacts of our own text conversion.
 
-    List-bullet markers at line starts ("- ", "* ") are dropped: our HTML-to-text step adds them, so
-    they are formatting, not posting text, and models quote across list items without them.
+    - List-bullet markers at line starts ("- ", "* ") are dropped: our HTML-to-text step adds them.
+    - Sentence punctuation followed by a space (". ", "; ", ", ") is dropped: once bullets are gone,
+      models join list items with ". " or "; ", and our conversion can leave ". ." runs. Punctuation
+      inside tokens ("7.0", "node.js", "B.Tech") is kept, so numbers and names are not changed.
     """
     s = re.sub(r"(?m)^\s*[-*]\s+", "", s.translate(_QUOTES))
+    s = re.sub(r"[.,;:!?]+(?=\s|$)", "", s)
     return " ".join(s.lower().split())
 
 
 def evidence_ok(evidence: str | None, text_norm: str) -> bool:
+    """True if the evidence is verbatim in the (normalized) posting text.
+
+    Wrapping quote marks are ignored. A quote stitched with "..." passes only if EVERY fragment is verbatim.
+    """
     if not evidence:
         return False
-    ev = norm_for_match(evidence).strip(" .…")
-    if not ev:
-        return False
-    if ev in text_norm:
-        return True
-    # Models often stitch several exact quotes with "..." - accept only if EVERY fragment is verbatim.
-    frags = [f.strip(" .,;:-") for f in re.split(r"\.\.\.+|…", ev)]
+    raw = evidence.strip().strip(_WRAP).strip()
+    frags = [norm_for_match(f.strip().strip(_WRAP)) for f in re.split(r"\.\.\.+|…", raw)]
     frags = [f for f in frags if f]
-    return len(frags) > 1 and all(len(f) >= 3 and f in text_norm for f in frags)
+    if not frags:
+        return False
+    if len(frags) == 1:
+        return frags[0] in text_norm
+    return all(len(f) >= 3 and f in text_norm for f in frags)
 
 
 def _empty(v: Any) -> bool:

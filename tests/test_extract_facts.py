@@ -153,3 +153,19 @@ def test_bullet_markers_ignored_in_evidence_match() -> None:
     tn = norm_for_match("Requirements:\n- Python and SQL.\n- Docker experience.")
     assert evidence_ok("Python and SQL. Docker experience.", tn)
     assert evidence_ok("- Python and SQL.", tn)
+
+
+@pytest.mark.parametrize("evidence,ok", [
+    ("hands‑on experience with Python", True),        # non-breaking hyphen vs "-"
+    ('"Coinbase is a remote-first company"', True),         # wrapping quote marks
+    ("data dashboards; highly proficient in SQL", True),    # punctuation where a bullet line break was
+    ("pipelines. exposure to APIs", True),                  # our ". ." artifact
+    ("minimum 70 CGPA", False),                             # "7.0" is not "70": in-token punctuation kept
+    ("Job is a senior leadership role", False),             # invented
+    ("10+ years of overall experience, 5+ years leading", False),  # skipped "and"
+])
+def test_evidence_formatting_vs_real_mismatch(evidence: str, ok: bool) -> None:
+    text = ("Title: X\n\nCoinbase is a remote-first company.\n- Hands-on experience with Python\n- Build data dashboards\n"
+            "- Highly proficient in SQL\nData pipelines. . Exposure to APIs.\nMinimum 7.0 CGPA.\n"
+            "10+ years of overall experience, and 5+ years leading teams.")
+    assert evidence_ok(evidence, norm_for_match(text)) is ok
