@@ -81,3 +81,11 @@ def sf(db_url: str) -> Iterator[sessionmaker[Session]]:
 def session(sf: sessionmaker[Session]) -> Iterator[Session]:
     with sf() as s:
         yield s
+
+
+@pytest.fixture(autouse=True)
+def _no_stored_classifier(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests never load models/scam_clf.joblib (absent in CI); tests that need one pass a model explicitly."""
+    import app.trust.classifier as clf
+
+    monkeypatch.setattr(clf, "load_model", lambda path=None: None)

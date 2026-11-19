@@ -320,7 +320,7 @@ def process_jobs(s: Session, job_ids: Sequence[int], llm: LLMClient | None = Non
             continue  # facts left as they were, so `--stale` retries this job next time
         if job.source == "paste":
             r.facts = normalize_lakh_pay(r.facts)
-        r.facts, _ = guard_batch_years(r.facts)
+        r.facts, _batch_reason = guard_batch_years(r.facts)
         store_facts(s, jid, r)
         from app.ingest.role_family import classify_role
         from app.ingest.seniority import classify

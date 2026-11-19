@@ -1,0 +1,39 @@
+{
+ "split": {
+  "train": 14304,
+  "val": 1788,
+  "test": 1788,
+  "test_fraud": 87
+ },
+ "test_pr_auc": 0.9068014773930474,
+ "test_at_val_threshold": {
+  "threshold": 0.51,
+  "precision": 0.9594594594594594,
+  "recall": 0.8160919540229885,
+  "f1": 0.8819875776397516,
+  "tp": 71,
+  "fp": 3,
+  "fn": 16
+ },
+ "test_at_0.5": {
+  "threshold": 0.5,
+  "precision": 0.9473684210526315,
+  "recall": 0.8275862068965517,
+  "f1": 0.8834355828220859,
+  "tp": 72,
+  "fp": 4,
+  "fn": 15
+ },
+ "test_recall_at_precision_0.8": 0.8505747126436781,
+ "val_best_threshold": 0.51,
+ "data": {
+  "rows": 17880,
+  "fraudulent": 866,
+  "fraud_rate": 0.04843400447427293,
+  "share_US": 0.5959731543624162,
+  "share_GB": 0.13333333333333333,
+  "share_IN": 0.015436241610738255,
+  "caveat": "Kaggle EMSCAD data, 2012-2014, mostly US/GB; not validated on Indian or ATS postings."
+ },
+ "trained_at": "2026-11-19T16:49:20+00:00"
+}
