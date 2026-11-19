@@ -73,3 +73,12 @@ def test_india_eligibility(loc: str | None, ok: bool) -> None:
 
     el, reason = india_eligibility(loc, get_settings().cfg.ingest)
     assert el is ok and reason
+
+
+def test_paste_company_line_is_company_not_title() -> None:
+    text = "Company: Elip\n\nSoftware Engineer\nJoin Elip, a YC startup.\n\nPay: 1.5 lakh a month\nType: Internship"
+    nj = from_paste(text)
+    assert nj.company == "Elip" and nj.title == "Software Engineer"
+    spec = "Company: Acme\n\nCompany's flagship products:\n* DefXV: AR system\n\nWHO CAN APPLY\n* Degrees: B.Tech\n"
+    assert from_paste(spec).title != "Company: Acme" and not from_paste(spec).title.startswith(("Company", "*", "WHO"))
+    assert from_paste("Company: X\nRole: Data Intern\nmore text here").title == "Data Intern"

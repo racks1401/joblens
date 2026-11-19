@@ -49,6 +49,10 @@ def posting_text(title: str, company: str | None, location: str | None, descript
 
 
 def job_posting_text(job: Job, max_chars: int = 18000) -> str:
+    """For pasted jobs the title is only a guess, so it is not shown to the extractor: the model reads the
+    role from the posting itself (JobFacts.title), which then becomes the job title."""
+    if job.source == "paste":
+        return job.description_text[:max_chars]
     return posting_text(job.title, job.company or None, job.location_raw, job.description_text)[:max_chars]
 
 
@@ -257,7 +261,11 @@ def process_jobs(s: Session, job_ids: Sequence[int], llm: LLMClient | None = Non
             continue  # facts left as they were, so `--stale` retries this job next time
         store_facts(s, jid, r)
         from app.ingest.role_family import classify_role
+        from app.ingest.seniority import classify
 
+        if job.source == "paste" and r.valid and r.facts.title and r.facts.title.strip():
+            job.title = r.facts.title.strip()[:200]  # the role as extracted from the posting
+            job.is_fresher_relevant, job.seniority_reason = classify(job.title, job.description_text)
         job.role_family, job.role_reason = classify_role(job.title, r.facts.required_skills.value)
         s.commit()
         out["valid" if r.valid else "invalid"] += 1

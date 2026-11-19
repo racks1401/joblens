@@ -180,3 +180,22 @@ def test_coerce_unwraps_evidenced_title_company() -> None:
 def test_coerce_bare_null_field() -> None:
     f = JobFacts.model_validate(coerce_raw({"title": "T", "duration_months": None, "ppo_or_conversion": None}, "T", None))
     assert f.duration_months.value is None and f.ppo_or_conversion.value is None
+
+
+@pytest.mark.db
+def test_paste_title_comes_from_extracted_role(session) -> None:  # type: ignore[no-untyped-def]
+    from datetime import UTC, datetime
+
+    from app.extract.facts import job_posting_text, process_jobs
+    from app.ingest.paste import from_paste
+    from app.ingest.store import upsert_job
+    from app.models import Job
+
+    row, _ = upsert_job(session, from_paste("Company: Acme\n\nHello world, we build things.\nPython and SQL needed."),
+                        datetime.now(UTC))
+    session.commit()
+    assert not job_posting_text(row).startswith("Title:")  # the guess is not shown to the extractor
+    llm = fake_llm({"facts": lambda m, t: LLMResult(content=json.dumps({"title": "Backend Engineer Intern"}))})
+    process_jobs(session, [row.id], llm=llm)
+    job = session.get(Job, row.id)
+    assert job.title == "Backend Engineer Intern" and job.company == "Acme" and job.role_family == "engineering"

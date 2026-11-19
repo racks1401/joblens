@@ -30,7 +30,9 @@ def main() -> None:
     args = ap.parse_args()
     client = TestClient(create_app())
     with session_factory()() as s:
-        prof = Profile.model_validate(s.get(ProfileRow, __import__("uuid").UUID(args.profile)).data)
+        prow = s.get(ProfileRow, __import__("uuid").UUID(args.profile))
+        assert prow is not None, "profile not found"
+        prof = Profile.model_validate(prow.data)
     for f in args.files:
         text = Path(f).read_text(encoding="utf-8")
         print(f"\n################ {f} ({len(text)} chars)")
@@ -45,6 +47,7 @@ def main() -> None:
         job = r.json()
         with session_factory()() as s:
             row = s.get(Job, job["id"])
+            assert row is not None
             meta = {"job_id": row.id, "title": row.title, "company": row.company, "in_scope": row.in_scope,
                     "seniority": row.seniority_reason, "location_rule": row.location_reason,
                     "role_family": f"{row.role_family} ({row.role_reason})"}

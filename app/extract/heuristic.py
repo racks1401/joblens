@@ -385,13 +385,19 @@ def red_flags(text: str) -> list[Ev]:
     return out
 
 
+def _guess_title(text: str) -> str:
+    from app.ingest.paste import guess_title
+
+    return guess_title(text)
+
+
 def extract_facts(text: str) -> dict[str, Any]:
     """Return a JobFacts-shaped dict for a posting text."""
     title = _header(text, "Title")
     company = _header(text, "Company")
     req, nice = skills(text)
     return {
-        "title": title.group(1).strip() if title else (text.strip().split("\n", 1)[0][:120] or "Unknown"),
+        "title": title.group(1).strip() if title else _guess_title(text),
         "company": company.group(1).strip() if company and company.group(1).strip() else None,
         "employment_type": employment_type(text),
         "work_mode": work_mode(text),
