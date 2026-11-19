@@ -120,3 +120,51 @@ def india_eligibility(location: str | None, cfg: IngestCfg) -> tuple[bool, str]:
 def location_matches(location: str | None, cfg: IngestCfg) -> bool:
     """True if a job is open to candidates in India (see india_eligibility)."""
     return india_eligibility(location, cfg)[0]
+
+
+# Location phrases inside the posting text. Each pattern captures the place it names.
+_PLACE = r"([A-Za-z][A-Za-z .,&/()'-]{1,60})"
+TEXT_LOCATION_PATTERNS = [
+    re.compile(r"^\s*(?:[-*•]\s*)?(?:job\s+|work\s+|office\s+)?locations?\s*[:\-–]\s*" + _PLACE + r"\*?\s*$", re.I | re.M),
+    re.compile(r"\bremote\s*\(([^)\n]{2,40})\)", re.I),                          # "Remote (US)"
+    re.compile(r"\bremote\s+(?:in|within|from)\s+(?:the\s+)?([A-Z][A-Za-z .&-]{1,40}?)(?=[.,;)\n]|\s+(?:only|and|or)\b|$)"),
+    re.compile(r"\b(?:must|should|need to)\s+(?:be\s+)?(?:based|located|resid\w*|living|live)\s+in\s+(?:the\s+)?"
+               r"([A-Za-z .&-]{2,40}?)(?=[.,;)\n]|\s+(?:only|and|or)\b|$)", re.I),
+    re.compile(r"\b(?:authori[sz]ed|eligible|legally (?:able|permitted))\s+to\s+work\s+in\s+(?:the\s+)?"
+               r"([A-Za-z .&-]{2,40}?)(?=[.,;)\n]|\s+(?:only|and|or|without)\b|$)", re.I),
+]
+
+
+def text_location_phrases(text: str) -> list[str]:
+    """Places named by location phrases in the posting text (verbatim captures)."""
+    out: list[str] = []
+    for rx in TEXT_LOCATION_PATTERNS:
+        for m in rx.finditer(text or ""):
+            p = m.group(1).strip(" .,*")
+            if re.search(r"(?i)\b(country|countries|jurisdiction|location|locations|region|state|city|area|"
+                         r"office|this role|the role|which)\b", p) and not re.search(r"(?i)remote", p):
+                continue  # "eligible to work in the country", "based in the location": names no place
+            if p and p not in out:
+                out.append(p)
+    return out
+
+
+def text_location_check(text: str, cfg: IngestCfg) -> tuple[bool, str] | None:
+    """For an 'open remote' board listing: does the posting text limit it to other countries?
+
+    Returns None if the text names no place; (True, reason) if a phrase names India or open remote;
+    (False, reason) if every named place is outside India (e.g. "Location: Remote (US)").
+    """
+    phrases = text_location_phrases(text)
+    if not phrases:
+        return None
+    # Positive identification only: a phrase restricts the job if it names a known non-India country or
+    # region (ingest.remote_exclude: US, Canada, UK, Europe, EMEA, ...). Sentences like "This is a globally
+    # remote role" or "roles in every time zone" name no place and do not restrict anything.
+    india = [p for p in phrases if any(_has_word(p.lower(), k) for k in cfg.india_keywords)]
+    if india:
+        return True, f"posting names an India location: {india[0][:40]}"
+    limited = [p for p in phrases if any(_has_word(p.lower(), k) for k in cfg.remote_exclude)]
+    if limited:
+        return False, f"posting limits location: {'; '.join(limited)[:80]}"
+    return True, "posting names no non-India place"

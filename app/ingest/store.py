@@ -35,13 +35,21 @@ def _repost_count(s: Session, nj: NormalizedJob, now: datetime, window_days: int
     return int(mx or 0) + 1 if n else 0
 
 
-def _eligibility(location: str | None) -> tuple[bool, str]:
+def _eligibility(location: str | None, description: str | None = None) -> tuple[bool, str]:
+    """Board location first; for an 'open remote' listing, location phrases in the posting text can
+    restrict it ("Location: Remote (US)")."""
     from app.config import get_settings
-    from app.ingest.normalize import india_eligibility
+    from app.ingest.normalize import india_eligibility, text_location_check
 
     if location is None:  # pasted jobs have no ATS location; the user decides
         return True, "no ATS location (pasted job)"
-    return india_eligibility(location, get_settings().cfg.ingest)
+    cfg = get_settings().cfg.ingest
+    ok, why = india_eligibility(location, cfg)
+    if ok and why == "open remote" and description:
+        res = text_location_check(description, cfg)
+        if res is not None and not res[0]:
+            return res
+    return ok, why
 
 
 def upsert_job(s: Session, nj: NormalizedJob, now: datetime, window_days: int = 90) -> tuple[Job, str]:
@@ -56,14 +64,14 @@ def upsert_job(s: Session, nj: NormalizedJob, now: datetime, window_days: int = 
             repost_count=_repost_count(s, nj, now, window_days),
         )
         row.is_fresher_relevant, row.seniority_reason = classify(nj.title, nj.description_text)
-        row.is_india_eligible, row.location_reason = _eligibility(nj.location_raw)
+        row.is_india_eligible, row.location_reason = _eligibility(nj.location_raw, nj.description_text)
         row.role_family, row.role_reason = classify_role(nj.title)
         s.add(row)
         s.flush()
         return row, "new"
     row.last_seen_at, row.is_active = now, True
     row.location_raw, row.url = nj.location_raw, nj.url
-    row.is_india_eligible, row.location_reason = _eligibility(nj.location_raw)
+    row.is_india_eligible, row.location_reason = _eligibility(nj.location_raw, nj.description_text)
     row.posted_at = nj.posted_at or row.posted_at
     if row.content_hash != h:
         row.company, row.title, row.description_text, row.content_hash = nj.company, nj.title, nj.description_text, h

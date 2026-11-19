@@ -82,3 +82,32 @@ def test_paste_company_line_is_company_not_title() -> None:
     spec = "Company: Acme\n\nCompany's flagship products:\n* DefXV: AR system\n\nWHO CAN APPLY\n* Degrees: B.Tech\n"
     assert from_paste(spec).title != "Company: Acme" and not from_paste(spec).title.startswith(("Company", "*", "WHO"))
     assert from_paste("Company: X\nRole: Data Intern\nmore text here").title == "Data Intern"
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("About us.\nLocation: Remote (US)*\nPay: ...", False),
+    ("This role is remote within the United States.", False),
+    ("Candidates must be based in Canada.", False),
+    ("You must be authorized to work in the UK without sponsorship.", False),
+    ("Location: This is a Globally remote role", True),
+    ("Location: We have remote roles open in every time zone", True),
+    ("We have remote roles open in every time zone", None),  # no location phrase at all
+    ("Location: Remote - India / Bengaluru", True),
+    ("You must be eligible to work in the country where you are based.", None),  # names no place
+    ("Build great software with us.", None),
+])
+def test_text_location_check(text: str, expected: bool | None) -> None:
+    from app.config import get_settings
+    from app.ingest.normalize import text_location_check
+
+    res = text_location_check(text, get_settings().cfg.ingest)
+    assert (None if res is None else res[0]) is expected
+
+
+def test_eligibility_uses_text_only_for_open_remote() -> None:
+    from app.ingest.store import _eligibility
+
+    assert _eligibility("Remote", "Location: Remote (US)") == (False, "posting limits location: Remote (US); US")
+    assert _eligibility("Bengaluru, India", "Location: Remote (US)")[0] is True  # board India location wins
+    assert _eligibility("Remote", "Build things.") == (True, "open remote")
+    assert _eligibility(None, "Location: Remote (US)")[0] is True  # pasted job

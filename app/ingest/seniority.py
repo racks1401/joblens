@@ -119,7 +119,7 @@ def backfill() -> dict[str, int]:
             job.is_fresher_relevant, job.seniority_reason = ok, reason
             apply_extracted_experience(job, facts)
             out["relevant" if job.is_fresher_relevant else "not_relevant"] += 1
-            el, why = _eligibility(job.location_raw)
+            el, why = _eligibility(job.location_raw, job.description_text)
             job.is_india_eligible, job.location_reason = el, why
             out["india_eligible" if el else "not_india_eligible"] += 1
         s.commit()
