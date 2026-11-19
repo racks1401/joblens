@@ -13,3 +13,4 @@ models/*.joblib
 models/fastembed/
 *.log
 data/pasted/
+evals/data/retrieval_labels_reviewed_v1_summary_only.jsonl
