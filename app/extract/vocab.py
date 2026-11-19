@@ -92,8 +92,10 @@ SPECIALIZATION_PATTERNS: list[tuple[str, str, int]] = [
 
 SPECIALIZATION_SYNONYMS: dict[str, str] = {
     "cse": "computer science", "cs": "computer science", "computer science and engineering": "computer science",
+    "ee": "electrical engineering", "electrical": "electrical engineering", "mnc": "mathematics and computing",
+    "m&c": "mathematics and computing", "math and computing": "mathematics and computing",
     "computer engineering": "computer science", "it": "information technology", "ece": "electronics",
-    "electronics and communication": "electronics", "eee": "electrical", "ai": "artificial intelligence",
+    "electronics and communication": "electronics", "eee": "electrical engineering", "ai": "artificial intelligence",
     "ai & ml": "artificial intelligence", "aiml": "artificial intelligence", "ai & iot": "artificial intelligence",
     "data science": "data science", "ds": "data science",
 }

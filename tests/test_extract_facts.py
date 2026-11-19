@@ -276,3 +276,11 @@ def test_facts_v5_is_v4_plus_deadline_rule() -> None:
                          + len("rather than listing only the deadline year.")], "") == v4
     st = get_settings()
     assert st.cfg.prompts.facts_paste == "facts_v5" and st.cfg.prompts.facts == "facts_v3"
+
+
+def test_branch_codes_normalized() -> None:
+    from app.extract.vocab import norm_specialization
+
+    assert norm_specialization("EE") == "electrical engineering"
+    assert norm_specialization("MnC") == "mathematics and computing"
+    assert norm_specialization("ECE") == "electronics" and norm_specialization("CSE") == "computer science"
