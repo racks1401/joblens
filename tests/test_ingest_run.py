@@ -77,3 +77,42 @@ def test_paste_upsert_same_url_updates(session: Session) -> None:
     r1, k1 = upsert_job(session, from_paste("Role: SDE Intern\nstipend 20k", "https://x.test/1"), T0)
     r2, k2 = upsert_job(session, from_paste("Role: SDE Intern\nstipend 25k", "https://x.test/1"), T0)
     assert (k1, k2) == ("new", "changed") and r1.id == r2.id
+
+
+def _gh_job(i: int, posted: str) -> dict:
+    return {"id": i, "title": f"Engineer {i}", "location": {"name": "Bengaluru, India"},
+            "absolute_url": f"https://x.test/{i}", "first_published": posted,
+            "content": "&lt;p&gt;Build things with Python and SQL for our customers.&lt;/p&gt;"}
+
+
+def test_cap_never_deactivates_live_jobs(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.config import get_settings
+
+    get_settings().cfg.ingest.max_jobs_per_company = 2
+    old = [_gh_job(1, "2026-10-01T00:00:00Z"), _gh_job(2, "2026-10-02T00:00:00Z"), _gh_job(3, "2026-09-01T00:00:00Z")]
+    s1 = run(session, {"jobs": old}, T0)
+    assert s1["new"] == 2  # cap: the two newest
+
+    # newer jobs appear; the stored ones are still live -> they stay active, nothing is deactivated
+    newer = [_gh_job(4, "2026-11-10T00:00:00Z"), _gh_job(5, "2026-11-11T00:00:00Z")]
+    s2 = run(session, {"jobs": old + newer}, T0 + timedelta(days=1))
+    assert s2["deactivated"] == 0 and s2["new"] == 0 and s2["unchanged"] == 2
+    active = set(session.execute(select(Job.source_job_id).where(Job.is_active)).scalars())
+    assert active == {"1", "2"}
+
+    # job 1 is removed from the board -> deactivated, and its slot goes to the newest new job
+    s3 = run(session, {"jobs": [old[1], old[2]] + newer}, T0 + timedelta(days=2))
+    assert s3["deactivated"] == 1 and s3["new"] == 1
+    active = set(session.execute(select(Job.source_job_id).where(Job.is_active)).scalars())
+    assert active == {"2", "5"}
+
+
+def test_changed_content_drops_stale_facts(session: Session) -> None:
+    from app.models import JobFactsRow
+
+    row, _ = upsert_job(session, _nj("9"), T0)
+    session.add(JobFactsRow(job_id=row.id, facts={"title": "x"}, model="m", prompt_version="v", valid=True))
+    session.commit()
+    _, kind = upsert_job(session, _nj("9").model_copy(update={"description_text": "new text"}), T0)
+    session.commit()
+    assert kind == "changed" and session.get(JobFactsRow, row.id) is None

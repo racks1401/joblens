@@ -5,11 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from app.ingest.normalize import content_hash, norm_key
-from app.models import Job
+from app.models import Job, JobFactsRow
 from app.schemas import NormalizedJob
 
 
@@ -52,6 +52,9 @@ def upsert_job(s: Session, nj: NormalizedJob, now: datetime, window_days: int = 
     row.posted_at = nj.posted_at or row.posted_at
     if row.content_hash != h:
         row.company, row.title, row.description_text, row.content_hash = nj.company, nj.title, nj.description_text, h
+        # Facts extracted from the old text no longer have evidence in the new text: drop them so the
+        # job is re-extracted (pipeline step, or `python -m app.pipeline --stale` later).
+        s.execute(delete(JobFactsRow).where(JobFactsRow.job_id == row.id))
         s.flush()
         return row, "changed"
     s.flush()
@@ -59,7 +62,7 @@ def upsert_job(s: Session, nj: NormalizedJob, now: datetime, window_days: int = 
 
 
 def upsert_company(s: Session, source: str, company: str, jobs: list[NormalizedJob], now: datetime,
-                   window_days: int = 90) -> UpsertStats:
+                   window_days: int = 90, on_board: set[str] | None = None) -> UpsertStats:
     """Upsert a company's fetched jobs and deactivate its jobs not seen in this run. Does not commit."""
     st = UpsertStats()
     for nj in jobs:
@@ -67,10 +70,12 @@ def upsert_company(s: Session, source: str, company: str, jobs: list[NormalizedJ
         setattr(st, kind, getattr(st, kind) + 1)
         if kind != "unchanged":
             st.to_process.append(row.id)
-    res = s.execute(
-        update(Job)
-        .where(Job.source == source, Job.company == company, Job.is_active.is_(True), Job.last_seen_at < now)
-        .values(is_active=False)
-    )
+    # Deactivate only jobs that are no longer on the board. A job still on the board but not selected
+    # this run (filters/cap) keeps its state. on_board=None means "everything fetched was passed in".
+    q = update(Job).where(Job.source == source, Job.company == company, Job.is_active.is_(True),
+                          Job.last_seen_at < now)
+    if on_board is not None:
+        q = q.where(Job.source_job_id.not_in(list(on_board)) if on_board else Job.id.is_not(None))
+    res = s.execute(q.values(is_active=False))
     st.deactivated = res.rowcount or 0  # type: ignore[attr-defined]
     return st

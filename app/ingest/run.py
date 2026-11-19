@@ -46,19 +46,37 @@ def make_client(s: Settings, **kw: Any) -> PoliteClient:
     return PoliteClient(i.user_agent, rps=i.requests_per_second, timeout_s=i.timeout_s, retries=i.retries, **kw)
 
 
-def select_jobs(jobs: list[NormalizedJob], s: Settings) -> list[NormalizedJob]:
-    """Keep India/remote jobs with text; apply the per-company cap (India first, then newest)."""
-    cfg = s.cfg.ingest
-    kept = [j for j in jobs if j.title and j.description_text and location_matches(j.location_raw, cfg)]
-    if cfg.max_jobs_per_company and len(kept) > cfg.max_jobs_per_company:
-        def india(j: NormalizedJob) -> bool:
-            loc = (j.location_raw or "").lower()
-            return any(k in loc for k in cfg.india_keywords)
+def select_jobs(jobs: list[NormalizedJob], s: Settings, known_ids: set[str] | None = None) -> list[NormalizedJob]:
+    """Keep India/remote jobs with text, then apply the per-company cap to NEW jobs only.
 
-        oldest = datetime.min.replace(tzinfo=UTC)
-        kept.sort(key=lambda j: (not india(j), -(j.posted_at or oldest).timestamp(), j.source_job_id))
-        kept = kept[: cfg.max_jobs_per_company]
-    return kept
+    Jobs already stored for this company (known_ids) and still on the board are always kept, so the
+    cap never pushes a live job out of the pool. New jobs fill the remaining slots, India first, then newest.
+    """
+    cfg = s.cfg.ingest
+    known_ids = known_ids or set()
+    kept = [j for j in jobs if j.title and j.description_text and location_matches(j.location_raw, cfg)]
+    if not cfg.max_jobs_per_company:
+        return kept
+    known = [j for j in kept if j.source_job_id in known_ids]
+    new = [j for j in kept if j.source_job_id not in known_ids]
+
+    def india(j: NormalizedJob) -> bool:
+        loc = (j.location_raw or "").lower()
+        return any(k in loc for k in cfg.india_keywords)
+
+    oldest = datetime.min.replace(tzinfo=UTC)
+    new.sort(key=lambda j: (not india(j), -(j.posted_at or oldest).timestamp(), j.source_job_id))
+    return known + new[: max(0, cfg.max_jobs_per_company - len(known))]
+
+
+def active_ids(session: Session, source: str, company: str) -> set[str]:
+    """source_job_ids of this company's active stored jobs."""
+    from sqlalchemy import select
+
+    from app.models import Job
+
+    q = select(Job.source_job_id).where(Job.source == source, Job.company == company, Job.is_active.is_(True))
+    return set(session.execute(q).scalars())
 
 
 def run_ingest(session: Session, companies: list[CompanyCfg], client: PoliteClient, *,
@@ -76,9 +94,10 @@ def run_ingest(session: Session, companies: list[CompanyCfg], client: PoliteClie
                       token=c.token, status=res.status)
             summary["companies_failed"].append({"name": c.name, "status": res.status})
             continue
-        kept = select_jobs(res.jobs, s)
+        kept = select_jobs(res.jobs, s, active_ids(session, c.source, c.name))
         summary["filtered_out"] += len(res.jobs) - len(kept)
-        st = upsert_company(session, c.source, c.name, kept, now, s.cfg.ingest.repost_window_days)
+        st = upsert_company(session, c.source, c.name, kept, now, s.cfg.ingest.repost_window_days,
+                            on_board={j.source_job_id for j in res.jobs})
         session.commit()
         summary["companies_ok"] += 1
         for k in ("new", "changed", "unchanged", "deactivated"):
