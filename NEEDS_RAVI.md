@@ -48,11 +48,16 @@ Then:
 ```
 Re-check 10% of your labels a day later: `.\.venv\Scripts\python.exe -m evals.pool --recheck`.
 
-## 5. Install Docker Desktop (Compose has never been run)
+## 5. Docker Compose (verified 2026-11-19)
+`docker compose up -d --build` works; `/health` is green. The db container is published on **host port 5433**
+(your Postgres 17 service keeps 5432); inside the Compose network the api still uses `db:5432`.
+If `docker` is not found in an old shell, open a new one (Docker Desktop adds itself to your user PATH).
 ```powershell
 docker compose up -d --build
 Invoke-RestMethod http://localhost:8000/health
 docker compose run --rm api python -m app.ingest.run
+# host tools against the Compose db:
+$env:DATABASE_URL="postgresql+psycopg://joblens:joblens@localhost:5433/joblens"
 ```
 
 ## 6. Scam dataset (P5)

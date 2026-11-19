@@ -4,9 +4,9 @@ Source of truth: `docs/JobLens_Project_Spec.pdf` (v1.0). Phases follow spec Sect
 
 ## Environment notes (apply to all phases)
 
-- **Docker is not installed on the build machine**, so `docker compose up` could not be run here.
-  The Dockerfile / docker-compose.yml are written to spec (python:3.12-slim for api and ui,
-  pgvector/pgvector:pg16 for db) but are **unverified**. See NEEDS_RAVI.md.
+- Docker Compose verified on 2026-11-19 (Docker 29.9.3, Compose v5.7.0): db (pgvector/pgvector:pg16,
+  pgvector 0.8.7), api and ui (python:3.12-slim) all run; `/health` green. The db is published on host port
+  **5433** because the machine's Postgres 17 service uses 5432 (left running).
 - Stand-in for local runs/tests: `scripts/devdb.py` starts Postgres 16 + pgvector 0.6.2 from the
   `pgserver` pip package (dev-only, not in requirements.txt) on 127.0.0.1:54329. DB tests use it
   (`joblens_test` db) or `TEST_DATABASE_URL`; they skip if no DB is reachable.
@@ -211,5 +211,14 @@ missed "N years" requirements, so the experience rule passed. Two real internshi
 - Extraction drafts: not started (qwen's remaining daily quota is used by the retrieval drafts).
 - 10 synthetic Indian-style paste posts in `evals/data/drafts/paste_jobs_synthetic.jsonl` (marked synthetic).
 - No gold files exist yet, so there are **no real E1/E2 numbers** in this repo.
+
+## Session 3 (2026-11-19)
+
+### Step 1 — Docker ✔
+`docker compose up -d --build`: all three containers up; `GET /health` → `status: ok`, db ok, pgvector 0.8.7.
+Port 5432 was held by the local Postgres 17 service, so the db container maps host 5433 → container 5432
+(`docker-compose.yml`, `.env.example`, NEEDS_RAVI updated); the system service was not touched. The ui
+container failed because `ui/streamlit_app.py` did not exist yet (P7); added a minimal status page (API
+status line + cold-start wait, spec 17) so the stack starts cleanly. The real pages are still P7.
 
 ## Not started: P5, P6, P7.
