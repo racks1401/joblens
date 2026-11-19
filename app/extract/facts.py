@@ -322,7 +322,7 @@ def process_jobs(s: Session, job_ids: Sequence[int], llm: LLMClient | None = Non
             r.facts = normalize_lakh_pay(r.facts)
         r.facts, _batch_reason = guard_batch_years(r.facts)
         store_facts(s, jid, r)
-        from app.ingest.role_family import classify_role
+        from app.ingest.role_family import role_for_job
         from app.ingest.seniority import classify
 
         # Split pieces ("role<N>-..." ids) keep the splitter's title: the heading line or "Needs human title".
@@ -331,7 +331,8 @@ def process_jobs(s: Session, job_ids: Sequence[int], llm: LLMClient | None = Non
             t = (r.facts.title or "").strip() if r.valid else ""
             job.title = t[:200] if t and norm_for_match(t) in norm_for_match(job.description_text) else TITLE_UNKNOWN
             job.is_fresher_relevant, job.seniority_reason = classify(job.title, job.description_text)
-        job.role_family, job.role_reason = classify_role(job.title, r.facts.required_skills.value)
+        job.role_family, job.role_reason = role_for_job(f"{job.source}:{job.source_job_id}", job.title,
+                                                       r.facts.required_skills.value)
         from app.ingest.seniority import apply_extracted_experience
 
         apply_extracted_experience(job, r.facts.model_dump(mode="json"))

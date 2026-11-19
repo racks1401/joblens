@@ -129,6 +129,7 @@ class IngestCfg(BaseModel):
     max_description_chars: int = 20000
     repost_window_days: int = 90
     max_jobs_per_company: int = 0
+    role_family_overrides: dict[str, dict[str, str]] = {}  # job_key -> {family, reason}; human-reviewed
     india_keywords: list[str] = []
     remote_keywords: list[str] = []
     remote_exclude: list[str] = []

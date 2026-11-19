@@ -53,6 +53,11 @@ ingest:
   repost_window_days: 90
   # Cap per company to keep the pool at 300-1,000 jobs (India locations first, then newest). 0 = no cap.
   max_jobs_per_company: 20
+  # Human-reviewed role-family decisions that win over the rules (job_key -> family + reason).
+  role_family_overrides:
+    "greenhouse:6115382004": {family: engineering, reason: "kept in scope by builder review 2026-11-19 (CloudSEK Security Consultant Intern)"}
+    "greenhouse:5997804004": {family: engineering, reason: "kept in scope by builder review 2026-11-19 (CloudSEK Technical Security Consultant)"}
+    "lever:137a91f9-d910-4d9d-8f42-6bf7a5aa6c86": {family: data_ml, reason: "kept in scope by builder review 2026-11-19 (Stable Money AI Product Builder)"}
   # Keep only jobs whose location looks like India or open remote. Empty list = keep all.
   india_keywords: [india, bengaluru, bangalore, hyderabad, pune, mumbai, delhi, "new delhi", gurugram, gurgaon,
                    noida, chennai, kolkata, ahmedabad, jaipur, kochi, coimbatore, indore, chandigarh, trivandrum,

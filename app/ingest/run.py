@@ -22,7 +22,7 @@ from app.ingest import ashby, greenhouse, lever
 from app.ingest.common import FetchResult
 from app.ingest.http import PoliteClient
 from app.ingest.normalize import location_matches
-from app.ingest.role_family import TECH_FAMILIES, classify_role
+from app.ingest.role_family import TECH_FAMILIES, role_for_job
 from app.ingest.seniority import classify
 from app.ingest.store import upsert_company
 from app.logs import log_event, setup_logging
@@ -50,7 +50,7 @@ def make_client(s: Settings, **kw: Any) -> PoliteClient:
 
 def in_target(j: NormalizedJob) -> bool:
     """New jobs worth storing: fresher-relevant and a tech role family (engineering, data_ml, product)."""
-    return classify(j.title, j.description_text)[0] and classify_role(j.title)[0] in TECH_FAMILIES
+    return classify(j.title, j.description_text)[0] and role_for_job(f"{j.source}:{j.source_job_id}", j.title)[0] in TECH_FAMILIES
 
 
 def select_jobs(jobs: list[NormalizedJob], s: Settings, known_ids: set[str] | None = None) -> list[NormalizedJob]:

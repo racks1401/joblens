@@ -30,7 +30,7 @@ def _all_fresher(monkeypatch: pytest.MonkeyPatch) -> None:
     import app.ingest.store as store_mod
 
     monkeypatch.setattr(run_mod, "classify", lambda t, d: (True, "test"))
-    monkeypatch.setattr(run_mod, "classify_role", lambda t, skills=None: ("engineering", "test"))
+    monkeypatch.setattr(run_mod, "role_for_job", lambda k, t, skills=None: ("engineering", "test"))
     monkeypatch.setattr(store_mod, "classify", lambda t, d: (True, "test"))
 
 
