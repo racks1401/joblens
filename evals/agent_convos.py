@@ -1,11 +1,12 @@
-"""Run the 10 P6 test conversations for profile p00 and save full transcripts.
+"""Run the P6 test conversations for profile p00 and save full transcripts.
 
-    python -m evals.agent_convos [--only c02,c03]
+    python -m evals.agent_convos --run agent_run3 [--only c02,c03]
 
 Uses the anonymized p00 profile from evals/data/profiles.jsonl, attached to the saved DB profile row (needed for
 memory and sessions). p00's long-term memory is cleared before and after the run so results are reproducible.
 Stops cleanly when an LLM limit is hit and records which conversations did not run.
-Writes evals/results/agent_transcripts/cNN.{json,md} and evals/results/agent_p00.{json,md}.
+Each run writes to its own folder: evals/results/<run>/agent_transcripts/cNN.{json,md} and <run>/agent_p00.{json,md}.
+Earlier runs: agent_run1 (10 conversations), agent_run2 (10 conversations).
 """
 
 from __future__ import annotations
@@ -27,7 +28,6 @@ from app.schemas import Profile
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "evals" / "results"
-OUTDIR = RESULTS / "agent_transcripts"
 
 CONVOS: list[tuple[str, list[str]]] = [
     ("c01", ["best internships for me in Bengaluru"]),
@@ -40,6 +40,12 @@ CONVOS: list[tuple[str, list[str]]] = [
     ("c08", ["find my top match and explain why it fits me"]),
     ("c09", ["full-time roles paying at least 50000 a month"]),
     ("c10", ["am I eligible for the Google SDE role?"]),
+    # honesty tests (added for run 3)
+    ("c11", ["does Elip charge any fee"]),
+    ("c12", ["am I definitely eligible for the Stripe role"]),
+    ("c13", ["which job pays the most"]),
+    ("c14", ["tell me about jobs at Zerodha"]),  # Zerodha: no job in the database (checked before the run)
+    ("c15", ["remember that I prefer Hyderabad", "show jobs in my preferred city"]),
 ]
 
 
@@ -51,6 +57,14 @@ def p00() -> Profile:
     raise SystemExit("p00 not in evals/data/profiles.jsonl")
 
 
+def flags(g: dict[str, Any]) -> list[str]:
+    return ([f"id {x}" for x in g["unsupported_job_ids"]]
+            + [f"{u['kind']} {u['value']}" for u in g["unsupported_numbers"]]
+            + [f"no id: {j['job_id']}" for j in g["jobs_named_without_id"]]
+            + [f"no verdict: {x}" for x in g.get("verdict_missing", [])]
+            + [f"verdict {x['job_id']}: tool {x['tool']}, answer {x['answer']}" for x in g.get("verdict_mismatch", [])])
+
+
 def md(cid: str, turns: list[dict[str, Any]]) -> str:
     out = [f"# Agent transcript {cid} (profile p00)\n"]
     for i, t in enumerate(turns, 1):
@@ -59,25 +73,28 @@ def md(cid: str, turns: list[dict[str, Any]]) -> str:
         for tr in r["tool_trace"]:
             out.append(f"- step {tr['step']}: `{tr['tool']}({json.dumps(tr['args'], ensure_ascii=False)})` "
                        f"{tr['ms']} ms, {tr['result_chars']} chars" + (f", error: {tr['error']}" if tr["error"] else ""))
-            out.append(f"  - output: `{json.dumps(tr['output'], ensure_ascii=False)[:1500]}`")
+            out.append(f"  - output: `{json.dumps(tr['output'], ensure_ascii=False)}`")
         g = r["grounding"]
         out += ["", f"**Assistant:**\n\n{r['answer']}\n",
-                f"**Grounding:** {'PASS' if g['ok'] else 'FAIL'} - job ids checked {g['job_ids_checked']}, "
-                f"numbers checked {g['numbers_checked']}, unsupported ids {g['unsupported_job_ids']}, "
-                f"unsupported numbers {g['unsupported_numbers']}, named without id {g['jobs_named_without_id']}, "
-                f"small numbers skipped {g['skipped_small_numbers']}\n",
+                f"**Grounding:** {'PASS' if g['ok'] else 'FAIL'} (tools only: {'PASS' if g['ok_tools_only'] else 'FAIL'})"
+                f" - job ids checked {g['job_ids_checked']}, numbers checked {g['numbers_checked']}, "
+                f"accepted from profile {g['accepted_from_profile']}, from user message {g['accepted_from_user_message']}, "
+                f"flags {flags(g) or 'none'}, small numbers skipped {g['skipped_small_numbers']}\n",
                 f"**Tokens:** {r['tokens']} in {r['llm_calls']} agent LLM calls (model {r['model']}); "
-                f"stop: {r['stop']}; {t['seconds']} s\n"]
+                f"explanations skipped: {r.get('explanations_skipped') or 'none'}; stop: {r['stop']}; {t['seconds']} s\n"]
     return "\n".join(out)
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--run", required=True, help="output folder under evals/results (new name per run)")
     ap.add_argument("--only", default="")
     args = ap.parse_args()
     only = set(filter(None, args.only.split(",")))
+    run_dir = RESULTS / args.run
+    outdir = run_dir / "agent_transcripts"
+    outdir.mkdir(parents=True, exist_ok=True)
     profile = p00()
-    OUTDIR.mkdir(parents=True, exist_ok=True)
     summary: list[dict[str, Any]] = []
     limit_hit = None
     with session_factory()() as s:
@@ -87,7 +104,7 @@ def main() -> None:
             if only and cid not in only:
                 continue
             if limit_hit:
-                summary.append({"id": cid, "ran": False, "reason": f"not run: {limit_hit}"})
+                summary.append({"id": cid, "ran": False, "messages": msgs, "reason": f"not run: {limit_hit}"})
                 continue
             turns: list[dict[str, Any]] = []
             sid = None
@@ -96,49 +113,53 @@ def main() -> None:
                 r = run_turn(s, pid, profile, m, session_id=sid)
                 sid = uuid.UUID(r["session_id"])
                 turns.append({"user": m, "result": r, "seconds": round(time.perf_counter() - t0, 1)})
-                print(cid, m[:50], "| grounded:", r["grounding"]["ok"], "| tokens:", r["tokens"], "| stop:", r["stop"],
-                      flush=True)
+                print(cid, m[:50], "| grounded:", r["grounding"]["ok"], "| tools-only:", r["grounding"]["ok_tools_only"],
+                      "| tokens:", r["tokens"], "| stop:", r["stop"], flush=True)
                 if r["stop"] and r["stop"].startswith("llm_limit"):
                     limit_hit = r["stop"]
                     break
             mem_after = list_memory(s, pid)
             rec = {"id": cid, "profile": "p00", "turns": turns, "memory_after": mem_after}
-            (OUTDIR / f"{cid}.json").write_text(json.dumps(rec, indent=1, ensure_ascii=False, default=str), encoding="utf-8")
-            (OUTDIR / f"{cid}.md").write_text(md(cid, turns) + f"\nMemory after: `{json.dumps(mem_after)}`\n",
+            (outdir / f"{cid}.json").write_text(json.dumps(rec, indent=1, ensure_ascii=False, default=str), encoding="utf-8")
+            (outdir / f"{cid}.md").write_text(md(cid, turns) + f"\nMemory after: `{json.dumps(mem_after)}`\n",
                                               encoding="utf-8")
             summary.append({"id": cid, "ran": True, "messages": msgs,
                             "grounded": all(t["result"]["grounding"]["ok"] for t in turns),
+                            "grounded_tools_only": all(t["result"]["grounding"]["ok_tools_only"] for t in turns),
+                            "complete": not limit_hit,
                             "turns": [{"grounding": t["result"]["grounding"], "stop": t["result"]["stop"],
                                        "tools": [x["tool"] for x in t["result"]["tool_trace"]],
                                        "tokens": t["result"]["tokens"]} for t in turns]})
         delete_memory(s, pid)
     tot = sum(t["tokens"]["total"] for c in summary if c.get("ran") for t in c["turns"])
-    (RESULTS / "agent_p00.json").write_text(json.dumps({"conversations": summary, "total_tokens": tot}, indent=1,
-                                                       default=str), encoding="utf-8")
-    rows = ["| Conv | User message(s) | Tools | Grounding | Flags | Tokens | Stop |", "|---|---|---|---|---|---|---|"]
+    (run_dir / "agent_p00.json").write_text(json.dumps({"conversations": summary, "total_tokens": tot,
+                                                        "limit_hit": limit_hit}, indent=1, default=str), encoding="utf-8")
+    rows = ["| Conv | User message(s) | Tools | Grounding | Tools-only | Flags | Tokens | Stop |",
+            "|---|---|---|---|---|---|---|---|"]
     for c in summary:
         if not c.get("ran"):
-            rows.append(f"| {c['id']} | | | not run | | | {c['reason']} |")
+            rows.append(f"| {c['id']} | {' / '.join(c['messages'])} | | not run | | | | {c['reason'][:80]} |")
             continue
-        flags = []
-        for t in c["turns"]:
-            g = t["grounding"]
-            flags += [f"id {x}" for x in g["unsupported_job_ids"]] + [f"{u['kind']} {u['value']}" + (" (profile value)" if u.get("in_profile") else "")
-                                                                    for u in g["unsupported_numbers"]]
-            flags += [f"no id: {j['job_id']}" for j in g["jobs_named_without_id"]]
+        fl = [f for t in c["turns"] for f in flags(t["grounding"])]
+        acc = [f"profile {v}" for t in c["turns"] for v in t["grounding"]["accepted_from_profile"]]
+        acc += [f"user {v}" for t in c["turns"] for v in t["grounding"]["accepted_from_user_message"]]
         rows.append(f"| {c['id']} | {' / '.join(c['messages'])} | {', '.join(x for t in c['turns'] for x in t['tools'])} | "
-                    f"{'PASS' if c['grounded'] else 'FAIL'} | {'; '.join(flags)} | "
-                    f"{sum(t['tokens']['total'] for t in c['turns'])} | {', '.join(str(t['stop']) for t in c['turns'] if t['stop']) or '-'} |")
+                    f"{'PASS' if c['grounded'] else 'FAIL'} | {'PASS' if c['grounded_tools_only'] else 'FAIL'} | "
+                    f"{'; '.join(fl + (['accepted: ' + ', '.join(acc)] if acc else [])) or '-'} | "
+                    f"{sum(t['tokens']['total'] for t in c['turns'])} | "
+                    f"{', '.join(str(t['stop'])[:80] for t in c['turns'] if t['stop']) or '-'} |")
     n_ran = sum(1 for c in summary if c.get("ran"))
     n_ok = sum(1 for c in summary if c.get("ran") and c["grounded"])
-    n_prof = sum(1 for c in summary if c.get("ran") and not c["grounded"]
-                 and all(t["grounding"]["ok"] or t["grounding"].get("only_profile_values_flagged") for t in c["turns"]))
-    (RESULTS / "agent_p00.md").write_text(
-        f"### P6 agent test conversations, profile p00 (n={n_ran})\n\nGrounding check passed in {n_ok} of {n_ran} "
-        f"conversations; {n_prof} more failed only because the answer repeated the user's own profile values "
-        f"(CGPA, batch year), which are not in that turn's tool outputs. Total tokens {tot} (agent + explain calls; cached calls count their original tokens).\n\n"
+    n_strict = sum(1 for c in summary if c.get("ran") and c["grounded_tools_only"])
+    left = [c["id"] for c in summary if not c.get("ran")]
+    (run_dir / "agent_p00.md").write_text(
+        f"### Agent test conversations, profile p00 ({args.run}, n={n_ran} run)\n\n"
+        f"Grounding check (job ids, numbers and verdicts vs this turn's tool outputs; real profile values and "
+        f"numbers from the user's own message accepted): **{n_ok} of {n_ran}** passed. Strict, tool outputs only: "
+        f"{n_strict} of {n_ran}. Total tokens {tot} (agent + summary + explain calls)."
+        + (f" LLM limit hit; not run: {', '.join(left)}." if left else "") + "\n\n"
         + "\n".join(rows) + "\n", encoding="utf-8")
-    print(f"grounded {n_ok}/{n_ran}, total tokens {tot}")
+    print(f"grounded {n_ok}/{n_ran} (tools-only {n_strict}/{n_ran}), total tokens {tot}, not run: {left}")
 
 
 if __name__ == "__main__":
