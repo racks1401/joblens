@@ -199,3 +199,12 @@ def test_paste_title_comes_from_extracted_role(session) -> None:  # type: ignore
     process_jobs(session, [row.id], llm=llm)
     job = session.get(Job, row.id)
     assert job.title == "Backend Engineer Intern" and job.company == "Acme" and job.role_family == "engineering"
+
+
+def test_facts_v3_is_v1_plus_two_rules() -> None:
+    from app.extract.prompting import build_messages, load_prompt
+
+    v1, v3 = load_prompt("facts_v1")[0], load_prompt("facts_v3")[0]
+    assert "NOT batch years" in v3 and '["all"]' in v3 and "NOT batch years" not in v1
+    msgs = build_messages("facts_v3", json_schema="{}", job_text="POSTING")
+    assert "POSTING" in msgs[1]["content"]
