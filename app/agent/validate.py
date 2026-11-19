@@ -36,6 +36,9 @@ class Grounding:
     jobs_named_without_id: list[dict[str, Any]] = field(default_factory=list)
     verdict_missing: list[int] = field(default_factory=list)  # job listed without the verdict its tool returned
     verdict_mismatch: list[dict[str, Any]] = field(default_factory=list)  # answer states a different verdict
+    rules_not_in_job_output: list[dict[str, Any]] = field(default_factory=list)  # rule named for a job, not in its lists
+    rules_for_unchecked_job: list[dict[str, Any]] = field(default_factory=list)  # rules given, job's rules never fetched
+    wrong_job_counts: list[dict[str, Any]] = field(default_factory=list)  # "checked N jobs" not matching any tool count
     accepted_from_profile: list[str] = field(default_factory=list)  # equal to the user's real profile value
     accepted_from_user_message: list[str] = field(default_factory=list)  # the user typed this number this turn
     ok_tools_only: bool = True  # strict rule: profile / user-message values count as unsupported
@@ -110,6 +113,83 @@ def tool_verdicts(outputs: list[dict[str, Any]]) -> dict[int, str]:
         elif isinstance(x, list):
             stack.extend(x)
     return out
+
+
+RULE_WORDS = {
+    "degree": r"degrees?",
+    "specialization": r"speciali[sz]ations?|branch(?:es)?|disciplines?",
+    "graduation_year": r"graduation[ _]year|batch(?:[ _]years?)?|grad(?:uation)? year",
+    "cgpa": r"c?gpa",
+    "experience": r"experience",
+    "location": r"locations?",
+    "pay": r"pay|stipend|salary",
+    "employment_type": r"employment[ _]type|job type",
+}
+RULE_CTX = re.compile(r"(?i)needs?[ _]checking|need(?:s)? (?:to be )?(?:checked|verif\w*)|check(?:ing)? needed|to check|"
+                      r"failed|fails?\b|failing|not met|does not meet|verify|verification|unknown")
+_RULE_ANY = re.compile(r"(?i)\b(" + "|".join(f"(?P<{k}>{v})" for k, v in RULE_WORDS.items()) + r")\b")
+COUNT_RX = re.compile(r"(?i)\b(?:checked|jobs? checked|postings? checked)\s*:?\s*\**\s*(\d+)\b|"
+                      r"\b(\d+)\s+(?:jobs?|postings?|listings?|roles?)\s+(?:checked|returned|found|listed|compared)\b|"
+                      r"\bchecked\s+(\d+)\s+(?:jobs?|postings?)")
+
+
+def tool_rules(outputs: list[dict[str, Any]]) -> dict[int, set[str]]:
+    """job_id -> rule names in that job's needs_checking / failed lists (only jobs whose rules were returned)."""
+    out: dict[int, set[str]] = {}
+    stack: list[Any] = list(outputs)
+    while stack:
+        x = stack.pop()
+        if isinstance(x, dict):
+            if isinstance(x.get("job_id"), int) and (isinstance(x.get("needs_checking"), list)
+                                                      or isinstance(x.get("failed"), list)):
+                s = out.setdefault(x["job_id"], set())
+                s |= set(x.get("needs_checking") or []) | set(x.get("failed") or [])
+                s |= {r["rule"] for r in x.get("rules") or [] if r.get("status") != "PASS"}
+            stack.extend(x.values())
+        elif isinstance(x, list):
+            stack.extend(x)
+    return out
+
+
+def tool_counts(outputs: list[dict[str, Any]]) -> set[int]:
+    """Job counts a statement like "checked N jobs" may truthfully refer to."""
+    counts: set[int] = set()
+    ids: set[int] = set()
+    elig_calls = 0
+    for o in outputs:
+        for k in ("jobs_returned", "jobs_compared"):
+            if isinstance(o.get(k), int):
+                counts.add(o[k])
+        if "verdict" in o and isinstance(o.get("job_id"), int):
+            elig_calls += 1
+    _walk_ids(outputs, ids)
+    counts |= {len(ids), elig_calls}
+    if sum(1 for o in outputs if isinstance(o.get("jobs_returned"), int)) > 1:
+        counts.add(sum(o["jobs_returned"] for o in outputs if isinstance(o.get("jobs_returned"), int)))
+    return counts
+
+
+def _walk_ids(v: Any, ids: set[int]) -> None:
+    if isinstance(v, dict):
+        if isinstance(v.get("job_id"), int):
+            ids.add(v["job_id"])
+        for x in v.values():
+            _walk_ids(x, ids)
+    elif isinstance(v, list):
+        for x in v:
+            _walk_ids(x, ids)
+
+
+def _rules_named(seg: str) -> set[str]:
+    """Rule names written as eligibility claims in a job's answer segment (after "needs checking", "failed", ...)."""
+    found: set[str] = set()
+    for line in seg.splitlines():
+        m = RULE_CTX.search(line)
+        if not m:
+            continue
+        for r in _RULE_ANY.finditer(line[m.start():]):
+            found |= {k for k in RULE_WORDS if r.group(k)}
+    return found
 
 
 def user_numbers(text: str) -> set[float]:
@@ -196,20 +276,40 @@ def check_answer(answer: str, outputs: list[dict[str, Any]], profile_numbers: se
     # Every listed job must show the verdict its tool returned (and not a different one). The segment for a job
     # runs from the start of the line holding its id to the start of the line holding the next id.
     verdicts = tool_verdicts(outputs)
+    rules_by_job = tool_rules(outputs)
     occ = sorted((sp[0], jid) for sp, jid in zip(id_spans, [int(next(x for x in m.groups() if x))
                                                             for m in ID_RX.finditer(stripped)], strict=True))
     starts = [stripped.rfind("\n", 0, pos) + 1 for pos, _ in occ]
     for i, (_, jid) in enumerate(occ):
-        if jid not in verdicts or (i and occ[i - 1][1] == jid):
+        if i and occ[i - 1][1] == jid:
+            continue
+        if jid not in verdicts:
+            named = _rules_named(stripped[starts[i]:starts[i + 1] if i + 1 < len(occ) and starts[i + 1] > starts[i]
+                                          else len(stripped)])
+            if named and jid not in rules_by_job:
+                g.rules_for_unchecked_job.append({"job_id": jid, "rules": sorted(named)})
             continue
         seg = stripped[starts[i]:starts[i + 1] if i + 1 < len(occ) and starts[i + 1] > starts[i] else len(stripped)]
+        named = _rules_named(seg)
+        if named:
+            if jid not in rules_by_job:
+                g.rules_for_unchecked_job.append({"job_id": jid, "rules": sorted(named)})
+            elif named - rules_by_job[jid]:
+                g.rules_not_in_job_output.append({"job_id": jid, "rules": sorted(named - rules_by_job[jid]),
+                                                  "tool": sorted(rules_by_job[jid])})
         found = _verdict_found(seg)
         if not found:
             g.verdict_missing.append(jid)
         elif verdicts[jid] not in found:
             g.verdict_mismatch.append({"job_id": jid, "tool": verdicts[jid], "answer": sorted(found)})
+    counts = tool_counts(outputs)
+    for m in COUNT_RX.finditer(stripped):
+        n = int(next(x for x in m.groups() if x))
+        if outputs and n not in counts:
+            g.wrong_job_counts.append({"stated": n, "tool_counts": sorted(counts), "context": m.group(0)})
     base = not (g.unsupported_job_ids or g.unsupported_numbers or g.jobs_named_without_id or g.verdict_missing
-                or g.verdict_mismatch)
+                or g.verdict_mismatch or g.rules_not_in_job_output or g.rules_for_unchecked_job
+                or g.wrong_job_counts)
     g.ok = base
     g.ok_tools_only = base and not (g.accepted_from_profile or g.accepted_from_user_message)
     return g

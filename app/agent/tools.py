@@ -229,7 +229,8 @@ def search_jobs(ctx: ToolContext, a: SearchJobsArgs) -> dict[str, Any]:
         tb = trust_block(ctx.session.get(TrustScore, r.job_id), None)
         rows.append({"job_id": r.job_id, "title": r.title, "company": r.company or None,
                      "location": r.location_raw, "final_score": r.final_score,
-                     "eligibility": r.eligibility.verdict if r.eligibility else None,
+                     **(elig_block(r.eligibility) if r.eligibility else
+                        {"eligibility": None, "needs_checking": None, "failed": None}),
                      "trust_level": tb["level"],
                      "scam_rules_fired": None if tb["scam_rules_fired"] is None else [x["code"] for x in tb["scam_rules_fired"]],
                      "ghost_signals": None if tb["ghost_signals"] is None else [x["code"] for x in tb["ghost_signals"]],
@@ -243,7 +244,7 @@ def search_jobs(ctx: ToolContext, a: SearchJobsArgs) -> dict[str, Any]:
         e = check_eligibility(ctx.profile, f or JobFacts(title=j.title))
         tb = trust_block(t, None)
         names.append({"job_id": j.id, "title": j.title, "company": j.company or None, "location": j.location_raw,
-                      "eligibility": e.verdict, "trust_level": tb["level"],
+                      **elig_block(e), "trust_level": tb["level"],
                       "scam_rules_fired": None if tb["scam_rules_fired"] is None else [x["code"] for x in tb["scam_rules_fired"]],
                       "ghost_signals": None if tb["ghost_signals"] is None else [x["code"] for x in tb["ghost_signals"]],
                       "url": j.url})

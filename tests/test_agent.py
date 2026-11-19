@@ -295,3 +295,71 @@ def test_provider_tool_use_failed_is_fed_back() -> None:
     fb = tool_use_feedback(E())
     assert fb and fb["tool"] == "search_jobs" and "minLength" in fb["error"]
     assert tool_use_feedback(Exception("x")) is None
+
+
+# ---------- run-4 fixes: per-job rule lists, job counts, agent_v3 ----------
+
+SEARCH_OUT = [{"jobs_returned": 3, "results": [
+    {"job_id": 350, "title": "Associate SDE Intern", "company": "Hevo Data", "eligibility": "INELIGIBLE",
+     "needs_checking": ["graduation_year", "cgpa"], "failed": ["degree"], "ghost_signals": []},
+    {"job_id": 1149, "title": "Frontend Engineer", "company": "Razorpay", "eligibility": "INELIGIBLE",
+     "needs_checking": ["degree", "graduation_year"], "failed": ["experience"], "ghost_signals": ["age_60"]},
+    {"job_id": 1091, "title": "AI Platform Engineer", "company": "Supabase", "eligibility": "CHECK",
+     "needs_checking": ["degree", "employment_type"], "failed": [], "ghost_signals": []}]}]
+
+
+def test_copied_rule_list_is_flagged() -> None:
+    ans = ("1. Associate SDE Intern, Hevo Data (job_id: 350) – INELIGIBLE\n   Failed: degree\n"
+           "2. Frontend Engineer, Razorpay (job_id: 1149) – INELIGIBLE\n   Failed: degree\n"
+           "3. AI Platform Engineer, Supabase (job_id: 1091) – CHECK\n   Needs checking: degree, cgpa\n")
+    g = check_answer(ans, SEARCH_OUT)
+    bad = {x["job_id"]: x["rules"] for x in g.rules_not_in_job_output}
+    assert bad == {1091: ["cgpa"]}  # 1149 lists degree under needs_checking, so "degree" is in its lists
+    assert not g.ok
+
+
+def test_correct_per_job_rules_pass() -> None:
+    ans = ("- Associate SDE Intern, Hevo Data (job_id: 350) – INELIGIBLE – failed: degree\n"
+           "- Frontend Engineer, Razorpay (job_id: 1149) – INELIGIBLE – failed: experience; ghost signal age_60\n"
+           "- AI Platform Engineer, Supabase (job_id: 1091) – CHECK – needs checking: degree, employment type\n"
+           "Jobs checked: 3.")
+    g = check_answer(ans, SEARCH_OUT)
+    assert g.ok, g.to_dict()
+
+
+def test_rules_for_unchecked_job_flagged() -> None:
+    out = [{"jobs_returned": 1, "results": [{"job_id": 7, "title": "SDE", "company": "X", "eligibility": "CHECK"}]}]
+    g = check_answer("SDE, X (job_id: 7) – CHECK – needs checking: degree, cgpa", out)
+    assert g.rules_for_unchecked_job == [{"job_id": 7, "rules": ["cgpa", "degree"]}] and not g.ok
+
+
+def test_wrong_job_count_flagged() -> None:
+    g = check_answer("Jobs checked: 7 (6 results + 1 name-match)\n- Associate SDE Intern, Hevo Data (job_id: 350) – "
+                     "INELIGIBLE", SEARCH_OUT)
+    assert [x["stated"] for x in g.wrong_job_counts] == [7] and not g.ok
+    assert check_answer("I checked 3 jobs.", SEARCH_OUT).wrong_job_counts == []
+
+
+def test_search_results_carry_rule_lists(client, session) -> None:  # type: ignore[no-untyped-def]
+    from app.agent.tools import search_jobs
+
+    client.post("/jobs/paste", json={"text": PASTE})
+    pid, p = _profile(session)
+    out = search_jobs(ToolContext(session=session, profile_id=pid, profile=p, memory={}),
+                      SearchJobsArgs(query="zzz Example"))
+    rows = out["results"] + (out["name_matches"] or [])
+    assert rows and all(isinstance(r["needs_checking"], list) and isinstance(r["failed"], list) for r in rows)
+
+
+test_search_results_carry_rule_lists = pytest.mark.db(test_search_results_carry_rule_lists)
+
+
+def test_agent_v3_prompt_rules_and_config() -> None:
+    from app.config import get_settings
+    from app.extract.prompting import load_prompt
+
+    assert get_settings().cfg.prompts.agent == "agent_v3"
+    text = load_prompt("agent_v3")[0]
+    for must in ("Never copy one job's rules onto another job", "rules were not checked",
+                 'Never say "no red flags"', "say how many there are", "were not checked"):
+        assert must in text, must
