@@ -59,6 +59,9 @@ class LLMCfg(BaseModel):
     timeout_s: float = 60
     max_retries: int = 2
     max_input_tokens: int = 6000
+    tpm_limit: int = 0  # provider tokens-per-minute limit for pacing; 0 = no pacing
+    extract_max_chars: int = 8000  # job text sent to the extractor
+    model_params: dict[str, dict[str, Any]] = {}  # extra request body per model
 
 
 class EmbModelCfg(BaseModel):

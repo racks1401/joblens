@@ -1,12 +1,22 @@
 # Weights, thresholds, models and prompt versions. Secrets live in .env.
 # ${VAR:-default} is replaced from the environment.
+# Defaults chosen from Groq's live model list on 2026-11-19 (scripts/list_models.py). Llama models
+# are no longer offered there. Judge/draft labels use a different family (Qwen) from the pipeline (gpt-oss).
 models:
-  extract: ${EXTRACT_MODEL:-llama-3.1-8b-instant}
-  explain: ${EXPLAIN_MODEL:-llama-3.1-8b-instant}
-  agent: ${AGENT_MODEL:-llama-3.3-70b-versatile}
-  judge: ${JUDGE_MODEL:-gemini-2.0-flash}   # different model family from explain
+  extract: ${EXTRACT_MODEL:-openai/gpt-oss-20b}
+  explain: ${EXPLAIN_MODEL:-openai/gpt-oss-20b}
+  agent: ${AGENT_MODEL:-openai/gpt-oss-120b}
+  judge: ${JUDGE_MODEL:-qwen/qwen3.8-27b}   # different model family from explain
 prompts: {facts: facts_v1, profile: profile_v1, explain: explain_v1, judge: judge_v1, agent: agent_v1}
-llm: {timeout_s: 60, max_retries: 2, max_input_tokens: 6000}
+llm:
+  timeout_s: 60
+  max_retries: 2
+  max_input_tokens: 6000
+  extract_max_chars: 8000       # ~2,000 tokens of job text; keeps each call ~2.5-4k tokens
+  tpm_limit: 8000               # Groq free tier reports 8,000 tokens/min per account (429s are retried)
+  model_params:                 # gpt-oss are reasoning models; low effort cut reasoning tokens 1046 -> 179 in a probe
+    openai/gpt-oss-20b: {reasoning_effort: low}
+    openai/gpt-oss-120b: {reasoning_effort: low}
 embeddings:
   default_model: minilm
   default_variant: structured

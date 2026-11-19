@@ -140,3 +140,16 @@ def test_invalid_after_retries_marks_invalid() -> None:
 ])
 def test_red_flag_context(text: str, flagged: bool) -> None:
     assert bool(heuristic.red_flags(text)) is flagged
+
+
+def test_stitched_evidence_needs_every_fragment_verbatim() -> None:
+    tn = norm_for_match("Ownership comes naturally to you. You have excessive curiosity about AI.")
+    assert evidence_ok("Ownership comes naturally to you... excessive curiosity", tn)
+    assert not evidence_ok("Ownership comes naturally to you... invented requirement", tn)
+    assert not evidence_ok("... ...", tn)
+
+
+def test_bullet_markers_ignored_in_evidence_match() -> None:
+    tn = norm_for_match("Requirements:\n- Python and SQL.\n- Docker experience.")
+    assert evidence_ok("Python and SQL. Docker experience.", tn)
+    assert evidence_ok("- Python and SQL.", tn)

@@ -105,15 +105,73 @@ class Provider(Protocol):
     ) -> LLMResult: ...
 
 
+class DailyLimitReached(RuntimeError):
+    """Provider says the daily token/request quota is used up; stop and resume tomorrow."""
+
+
+class TokenPacer:
+    """Sliding 60 s window of tokens sent, to stay under a provider tokens-per-minute limit."""
+
+    def __init__(self, tpm: int, clock: Any = time.monotonic, sleep: Any = time.sleep) -> None:
+        self.tpm, self.clock, self.sleep = tpm, clock, sleep
+        self.events: list[tuple[float, int]] = []
+
+    def wait(self, tokens: int) -> None:
+        if self.tpm <= 0:
+            return
+        tokens = min(tokens, self.tpm)
+        while True:
+            now = self.clock()
+            self.events = [(t, n) for t, n in self.events if now - t < 60]
+            used = sum(n for _, n in self.events)
+            if used + tokens <= self.tpm:
+                return
+            self.sleep(max(0.5, 60 - (now - self.events[0][0])))
+
+    def record(self, tokens: int) -> None:
+        self.events.append((self.clock(), tokens))
+
+
+_PACERS: dict[str, TokenPacer] = {}
+
+
+def shared_pacer(base_url: str, tpm: int) -> TokenPacer:
+    """One pacer per provider endpoint: the limit is per account, not per client."""
+    if base_url not in _PACERS:
+        _PACERS[base_url] = TokenPacer(tpm)
+    return _PACERS[base_url]
+
+
+def _retry_after(headers: Any) -> float:
+    """Seconds to wait from retry-after or x-ratelimit-reset-tokens ('14.8s', '1m26s')."""
+    for k in ("retry-after", "x-ratelimit-reset-tokens"):
+        v = headers.get(k) if headers else None
+        if not v:
+            continue
+        m = re.fullmatch(r"(?:(\d+)m)?([\d.]+)s?", str(v).strip())
+        if m:
+            return float(m.group(1) or 0) * 60 + float(m.group(2))
+    return 10.0
+
+
 class OpenAIProvider:
-    """OpenAI-compatible provider via the openai SDK with a custom base_url."""
+    """OpenAI-compatible provider via the openai SDK with a custom base_url.
+
+    Paces requests under `tpm` tokens/minute, waits on 429 (per-minute limits) and raises
+    DailyLimitReached when the provider reports a per-day quota.
+    """
 
     name = "openai"
 
-    def __init__(self, api_key: str, base_url: str, timeout_s: float = 60, max_retries: int = 2) -> None:
+    def __init__(self, api_key: str, base_url: str, timeout_s: float = 60, max_retries: int = 2,
+                 tpm: int = 0, model_params: dict[str, dict[str, Any]] | None = None,
+                 rate_limit_retries: int = 8) -> None:
         from openai import OpenAI
 
         self.client = OpenAI(api_key=api_key, base_url=base_url or None, timeout=timeout_s, max_retries=max_retries)
+        self.pacer = shared_pacer(base_url, tpm)
+        self.model_params = model_params or {}
+        self.rate_limit_retries = rate_limit_retries
 
     def complete(
         self,
@@ -125,13 +183,60 @@ class OpenAIProvider:
         tools: list[dict[str, Any]] | None,
         task: str,
     ) -> LLMResult:
+        from openai import RateLimitError
+
+        est = sum(estimate_tokens(str(m.get("content") or "")) for m in messages) + 600
+        for attempt in range(self.rate_limit_retries + 1):
+            self.pacer.wait(est)
+            try:
+                res = self._complete_once(model=model, messages=messages, temperature=temperature,
+                                          json_mode=json_mode, tools=tools)
+            except RateLimitError as e:
+                body = str(getattr(e, "message", "") or e)
+                if re.search(r"per day|\bTPD\b|\bRPD\b|daily", body, re.I):
+                    raise DailyLimitReached(body[:300]) from e
+                self.pacer.record(est)
+                delay = _retry_after(getattr(e.response, "headers", None)) + 1
+                log_event(log, "llm_rate_limited", level=logging.WARNING, model=model, attempt=attempt + 1,
+                          delay_s=round(delay, 1))
+                if attempt == self.rate_limit_retries:
+                    raise
+                self.pacer.sleep(delay)
+                continue
+            self.pacer.record(res.tokens_in + res.tokens_out)
+            return res
+        raise RuntimeError("unreachable")
+
+    def _complete_once(
+        self,
+        *,
+        model: str,
+        messages: list[dict[str, Any]],
+        temperature: float,
+        json_mode: bool,
+        tools: list[dict[str, Any]] | None,
+    ) -> LLMResult:
         kwargs: dict[str, Any] = {"model": model, "messages": messages, "temperature": temperature}
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
         if tools:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
-        resp = self.client.chat.completions.create(**kwargs)
+        if self.model_params.get(model):
+            kwargs["extra_body"] = dict(self.model_params[model])
+        from openai import BadRequestError
+
+        try:
+            resp = self.client.chat.completions.create(**kwargs)
+        except BadRequestError as e:
+            # Groq rejects JSON-mode output that is not valid JSON; treat it as an invalid attempt
+            # (content = the failed generation) so the caller's validate-and-retry loop handles it.
+            body = getattr(e, "body", None) or {}
+            err = body.get("error", body) if isinstance(body, dict) else {}
+            if json_mode and isinstance(err, dict) and err.get("code") == "json_validate_failed":
+                log_event(log, "llm_json_validate_failed", level=logging.WARNING, model=model)
+                return LLMResult(content=str(err.get("failed_generation") or ""), model=model)
+            raise
         msg = resp.choices[0].message
         calls = [
             ToolCall(id=c.id, name=c.function.name, arguments=c.function.arguments or "{}")
@@ -268,7 +373,8 @@ def get_llm(role: str = "extract", cache: CacheStore | None = None) -> LLMClient
     key, base = s.env.llm_api_key, s.env.llm_base_url
     if role == "judge" and s.env.judge_api_key:
         key, base = s.env.judge_api_key, s.env.judge_base_url or base
-    prov = OpenAIProvider(key, base, s.cfg.llm.timeout_s, s.cfg.llm.max_retries)
+    prov = OpenAIProvider(key, base, s.cfg.llm.timeout_s, s.cfg.llm.max_retries, tpm=s.cfg.llm.tpm_limit,
+                          model_params=s.cfg.llm.model_params)
     return LLMClient(prov, model, cache, s.cfg.budget.daily_tokens)
 
 

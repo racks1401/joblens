@@ -86,3 +86,89 @@ def test_openai_provider_maps_response(monkeypatch: pytest.MonkeyPatch) -> None:
     r = prov.complete(model="m", messages=[], temperature=0, json_mode=True, tools=[{"x": 1}], task="t")
     assert r.tool_calls[0].args() == {"job_id": 3} and r.tokens_in == 11 and r.model == "m-x"
     assert captured["response_format"] == {"type": "json_object"} and captured["tool_choice"] == "auto"
+
+
+def test_token_pacer_waits_for_window() -> None:
+    from app.llm.client import TokenPacer
+
+    t = [0.0]
+    slept: list[float] = []
+
+    def sleep(d: float) -> None:
+        slept.append(d)
+        t[0] += d
+
+    p = TokenPacer(1000, clock=lambda: t[0], sleep=sleep)
+    p.wait(600)
+    p.record(600)
+    t[0] = 10.0
+    p.wait(600)  # 600 + 600 > 1000 -> wait until the first event leaves the 60 s window
+    assert slept == [50.0]
+    TokenPacer(0).wait(10**9)  # disabled
+
+
+def test_retry_after_parsing() -> None:
+    from app.llm.client import _retry_after
+
+    assert _retry_after({"retry-after": "7"}) == 7
+    assert _retry_after({"x-ratelimit-reset-tokens": "1m26.4s"}) == pytest.approx(86.4)
+    assert _retry_after({}) == 10.0
+
+
+def _rate_error(msg: str) -> Exception:
+    import httpx
+    from openai import RateLimitError
+
+    resp = httpx.Response(429, headers={"retry-after": "2"}, request=httpx.Request("POST", "http://x"))
+    return RateLimitError(msg, response=resp, body={"error": {"message": msg}})
+
+
+def _provider(monkeypatch: pytest.MonkeyPatch, effects: list[Any]) -> tuple[Any, list[float]]:
+    from types import SimpleNamespace
+
+    from app.llm import client as c
+
+    monkeypatch.setattr(c, "_PACERS", {})
+    prov = c.OpenAIProvider("k", "http://localhost:1/v1", tpm=0, model_params={"m": {"reasoning_effort": "low"}})
+    slept: list[float] = []
+    prov.pacer.sleep = slept.append
+    ok = SimpleNamespace(model="m", choices=[SimpleNamespace(message=SimpleNamespace(content="{}", tool_calls=None))],
+                         usage=SimpleNamespace(prompt_tokens=1, completion_tokens=1))
+    seen: list[dict[str, Any]] = []
+
+    def create(**kw: Any) -> Any:
+        seen.append(kw)
+        e = effects.pop(0)
+        if isinstance(e, Exception):
+            raise e
+        return ok
+
+    monkeypatch.setattr(prov.client.chat.completions, "create", create)
+    prov.seen = seen  # type: ignore[attr-defined]
+    return prov, slept
+
+
+def test_429_per_minute_waits_then_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
+    prov, slept = _provider(monkeypatch, [_rate_error("Rate limit reached: tokens per minute (TPM)"), "ok"])
+    r = prov.complete(model="m", messages=[], temperature=0, json_mode=True, tools=None, task="t")
+    assert r.content == "{}" and slept == [3.0]
+    assert prov.seen[0]["extra_body"] == {"reasoning_effort": "low"}
+
+
+def test_429_per_day_raises_daily_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.llm.client import DailyLimitReached
+
+    prov, _ = _provider(monkeypatch, [_rate_error("Rate limit reached: tokens per day (TPD): Limit 200000")])
+    with pytest.raises(DailyLimitReached):
+        prov.complete(model="m", messages=[], temperature=0, json_mode=True, tools=None, task="t")
+
+
+def test_json_validate_failed_becomes_invalid_attempt(monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx
+    from openai import BadRequestError
+
+    err = BadRequestError("bad", response=httpx.Response(400, request=httpx.Request("POST", "http://x")),
+                          body={"error": {"code": "json_validate_failed", "failed_generation": "{oops"}})
+    prov, _ = _provider(monkeypatch, [err])
+    r = prov.complete(model="m", messages=[], temperature=0, json_mode=True, tools=None, task="t")
+    assert r.content == "{oops"

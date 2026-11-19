@@ -62,15 +62,27 @@ _QUOTES = str.maketrans({"‘": "'", "’": "'", "“": '"', "”": '"', "–": 
 
 
 def norm_for_match(s: str) -> str:
-    """Whitespace + case normalization (plus typographic quotes/dashes) for the evidence check."""
-    return " ".join(s.translate(_QUOTES).lower().split())
+    """Whitespace + case normalization (plus typographic quotes/dashes) for the evidence check.
+
+    List-bullet markers at line starts ("- ", "* ") are dropped: our HTML-to-text step adds them, so
+    they are formatting, not posting text, and models quote across list items without them.
+    """
+    s = re.sub(r"(?m)^\s*[-*]\s+", "", s.translate(_QUOTES))
+    return " ".join(s.lower().split())
 
 
 def evidence_ok(evidence: str | None, text_norm: str) -> bool:
     if not evidence:
         return False
-    ev = norm_for_match(evidence).strip(" .…").removesuffix("...")
-    return bool(ev) and ev in text_norm
+    ev = norm_for_match(evidence).strip(" .…")
+    if not ev:
+        return False
+    if ev in text_norm:
+        return True
+    # Models often stitch several exact quotes with "..." - accept only if EVERY fragment is verbatim.
+    frags = [f.strip(" .,;:-") for f in re.split(r"\.\.\.+|…", ev)]
+    frags = [f for f in frags if f]
+    return len(frags) > 1 and all(len(f) >= 3 and f in text_norm for f in frags)
 
 
 def _empty(v: Any) -> bool:
@@ -214,7 +226,7 @@ def process_jobs(s: Session, job_ids: Sequence[int], llm: LLMClient | None = Non
     st = get_settings()
     llm = llm or get_llm("extract")
     pv = prompt_version or st.cfg.prompts.facts
-    max_chars = max(2000, (st.cfg.llm.max_input_tokens - 1500) * 4)
+    max_chars = min(st.cfg.llm.extract_max_chars, max(2000, (st.cfg.llm.max_input_tokens - 1500) * 4))
     out = {"valid": 0, "invalid": 0, "evidence_dropped": 0}
     for jid in job_ids:
         job = s.get(Job, jid)

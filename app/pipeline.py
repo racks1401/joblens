@@ -58,23 +58,55 @@ def main() -> None:
     """
     import argparse
 
-    from sqlalchemy import select
+    from sqlalchemy import case, or_, select
 
+    from app.config import get_settings
     from app.db import session_factory
+    from app.llm.client import DailyLimitReached, get_llm
     from app.logs import setup_logging
     from app.models import Job, JobFactsRow
 
     setup_logging()
     ap = argparse.ArgumentParser()
     ap.add_argument("--steps", default="facts,search,trust")
-    ap.add_argument("--all", action="store_true")
+    ap.add_argument("--all", action="store_true", help="re-process every active job")
+    ap.add_argument("--stale", action="store_true",
+                    help="only jobs whose facts came from a different model or prompt version (resumable)")
+    ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--chunk", type=int, default=25)
     args = ap.parse_args()
+    st = get_settings()
+    model = get_llm("extract").model
+    # Fresher-relevant titles first, then India locations, so a partial run covers the useful jobs.
+    priority = case((Job.title.op("~*")(r"intern|graduate|fresher|entry|junior|trainee|associate|new grad"), 0),
+                    else_=1)
+    india = case((Job.location_raw.op("~*")("|".join(st.cfg.ingest.india_keywords)), 0), else_=1)
     with session_factory()() as s:
-        q = select(Job.id).where(Job.is_active.is_(True)).order_by(Job.id)
-        if not args.all:
-            q = q.outerjoin(JobFactsRow, JobFactsRow.job_id == Job.id).where(JobFactsRow.job_id.is_(None))
-        ids = list(s.execute(q).scalars())
-        print(process_jobs(s, ids, steps=args.steps.split(",")), f"jobs={len(ids)}")
+        q = (select(Job.id).where(Job.is_active.is_(True))
+             .outerjoin(JobFactsRow, JobFactsRow.job_id == Job.id)
+             .order_by(priority, india, Job.id))
+        if args.stale:
+            q = q.where(or_(JobFactsRow.job_id.is_(None), JobFactsRow.model != model,
+                            JobFactsRow.prompt_version != st.cfg.prompts.facts, JobFactsRow.valid.is_(False)))
+        elif not args.all:
+            q = q.where(JobFactsRow.job_id.is_(None))
+        ids = list(s.execute(q).scalars())[: args.limit or None]
+        print(f"model={model} jobs={len(ids)}", flush=True)
+        totals: dict[str, int] = {}
+        done = 0
+        try:
+            for i in range(0, len(ids), args.chunk):
+                out = process_jobs(s, ids[i:i + args.chunk], steps=args.steps.split(","))
+                for v in out.values():
+                    if isinstance(v, dict):
+                        for k, n in v.items():
+                            if isinstance(n, int):
+                                totals[k] = totals.get(k, 0) + n
+                done += len(ids[i:i + args.chunk])
+                print(f"progress {done}/{len(ids)} {totals}", flush=True)
+        except DailyLimitReached as e:
+            print(f"STOPPED: provider daily limit reached after {done} jobs ({e}). Re-run with --stale to resume.")
+        print("final", totals, f"done={done}/{len(ids)}")
 
 
 if __name__ == "__main__":
