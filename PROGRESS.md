@@ -374,4 +374,33 @@ proposal: add it as an anonymized `p00` (no name) before drafting.
 6. **p00 drafts printed for review** (23): 7 × 2, 5 × 1, 11 × 0. Flagged: Wikimedia ("location is US"; it is
    remote) and Zscaler (0 for location only; guidelines cap a location mismatch at 1). No labels changed.
 
+## Session 7 (2026-11-19)
+
+1. **Seniority fix applied (all five causes)**: years phrasing without "experience", first requirement instead
+   of the minimum, title levels >= 3 (Engineer 3, SDE - 3, III, L4+), years in the title, and an evidenced
+   extracted `experience_min_years` >= 3 (junior titles excepted). Backfill: in scope 156 → 116, 40 marked not
+   fresher-relevant, 0 rows deleted. Level-2 titles asking ≤ 2 years stay in scope by design.
+2. **Pasted-job titles**: the extracted title is accepted only if it appears in the posting; otherwise
+   "Title unknown" (flag on `GET /jobs/{id}` → `flags`). Migration 0005: pasted jobs are always in scope (skip
+   the seniority, location and role-family filters). SpectoVX → "Title unknown", in scope, but not in your
+   top 50 (keyword search misses it; vector rank 36, hybrid rank 90 of 118). Elip stays "Software Engineer", rank 4.
+3. **Multi-role splitter** (`app/ingest/split.py`, prompt `split_v1`): LLM returns only line ranges; validated;
+   pieces = original header + role + footer lines; unheaded role → "Needs human title". 9 tests.
+   `data/pasted/jnj_multi_role.txt` did **not** contain the "Company: Johnson & Johnson" line when run (first
+   line still `*Johnson & Johnson*`), so company is empty. Result: 4 jobs — JJT Internship (₹75k/month),
+   TLDP (pay 15.65 read without its LPA unit), Product Engineer (pay 15.52 with currency "LPA"), and one flagged
+   "needs human title" (₹75k/month, PG-only). All CHECK for you (Hyderabad soft-fail). Remaining extraction gaps
+   in the pieces: LPA units, UG dropped from "Under Graduate & Post Graduate", branch list mixes "like …" examples
+   and degree codes. The earlier unsplit JNJ job 1297 was marked inactive (superseded).
+4. **Re-extraction on facts_v3**: 115/115 in-scope jobs, all valid, 37 evidence drops, no rate or daily
+   limit hit, 0 left. In scope now **120**, all on facts_v3.
+5. **Pool v3** (`evals/data/retrieval_pool_v3.jsonl`, 5 profiles, top-10 × M1–M5): 135 pairs; 83 carried over,
+   47 v2 pairs dropped, **52 new drafted** on qwen (5 calls, 10,128 tokens). All 135 have a draft.
+6. **p00 draft fixes** (from re-reading the posting text; still `status: draft`, previous label kept):
+   Wikimedia 1 → 0 ("Location: Remote (US)*" — the qwen reason was right; it is US-only), Zscaler 0 → 1 (2+ yrs
+   Java + hybrid Hyderabad: each a stretch, capped at 1), Sarvam SDE2 and Canonical Python Engineer: reasons
+   replaced with evidence-based ones.
+   New finding: the India-eligibility rule reads only the ATS location field ("Remote"), not "Location:" lines
+   in the description ("Remote (US)"). Not fixed yet.
+
 ## Not started: P5, P6, P7.
