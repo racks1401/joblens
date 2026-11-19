@@ -403,4 +403,33 @@ proposal: add it as an anonymized `p00` (no name) before drafting.
    New finding: the India-eligibility rule reads only the ATS location field ("Remote"), not "Location:" lines
    in the description ("Remote (US)"). Not fixed yet.
 
+## Session 8 (2026-11-19)
+
+1. **India location from the posting text**: for an "open remote" board listing, "Location: …" lines and phrases
+   such as "Remote (US)", "remote within the US", "must be based in X", "authorized to work in X" restrict it, but
+   only when they name a known non-India country/region (positive identification). The dry run of a first version
+   would have wrongly excluded 10 Canonical "globally remote / every time zone" jobs; fixed before applying.
+   Applied: in scope 120 → **119** (Wikimedia internship, "Location: Remote (US)*"); no rows deleted. 12 tests.
+2. **Pasted/split jobs**:
+   a. Lakh/LPA pay → full INR in code (only when the pay quote says LPA/lakh and the number is lakh-sized):
+      TLDP 15.65 "INR/year" → ₹15,65,000/year; Product Engineer 15.52 "LPA" → ₹15,52,000/year.
+   b. `facts_v4` = facts_v3 + (both degree levels when UG and PG are allowed; branches only from the eligible
+      list, no "like …" examples, no degree names). New setting `prompts.facts_paste: facts_v4`; `--stale`
+      compares each job with its own prompt. Re-extracted only the 6 pasted jobs (6/6 valid, 0 drops).
+      Before → after: JNJ degrees [MTECH, MCA] → [BACHELORS, MASTERS, MCA, MTECH] (PG-only piece: [MASTERS, MCA,
+      MTECH]); branches (10 incl. examples and "mca") → [computer science, electronics, ee, mnc]; TLDP/Product
+      Engineer batch [2027] → null; TLDP type null → full_time (from "CTC: 15.65 LPA", an inference); SpectoVX
+      title → "AI | App Development | Web Development" (a verbatim "Tracks" line, so the title rule accepted it —
+      it is a track list, not a role); Elip work_mode onsite → remote for "on-site or remote" (the schema holds
+      one mode, so both readings are incomplete). "ee"/"mnc" are not normalized (no synonym yet).
+   **Prompt per job:** facts_v4 — the 6 pasted jobs (1295 Elip, 1296 SpectoVX, 1298–1301 JNJ pieces);
+   facts_v3 — all 113 in-scope board jobs (ashby 22, greenhouse 76, lever 15).
+3. **Pool v4** (`evals/data/retrieval_pool_v4.jsonl`, 134 pairs): 131 carried from v3, 4 dropped, 2 new drafted
+   (2 qwen calls, 960 tokens). All pairs have a draft.
+4. **Review tool** `scripts/review_labels.py` (`--profile p00`, `--sample N`, `--pool`): shows requirements with
+   evidence quotes, profile summary and the draft; 0/1/2 / Enter / s / q; appends to
+   `evals/data/retrieval_labels_reviewed.jsonl` (status `human_reviewed`, timestamp); never writes the drafts.
+   Note for review: some draft reasons claim facts the posting does not state (e.g. "batch 2027 eligible" for the
+   HackerRank SDE intern, where no batch was extracted) — the tool shows the evidence next to the draft.
+
 ## Not started: P5, P6, P7.
