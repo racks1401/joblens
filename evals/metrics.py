@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Hashable, Iterable, Sequence
+from typing import Any
 
 
 def precision_at_k(rels: Sequence[int], k: int, threshold: int = 1) -> float:
@@ -31,7 +32,7 @@ def mrr(rels: Sequence[int], target: int = 2) -> float:
     return 0.0
 
 
-def recall_at_k(retrieved: Sequence[Hashable], relevant: set[Hashable], k: int) -> float:
+def recall_at_k(retrieved: Sequence[Any], relevant: set[Any], k: int) -> float:
     """|top k ∩ relevant| / |relevant| (0 if nothing is relevant)."""
     if not relevant:
         return 0.0
