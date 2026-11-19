@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,6 +32,12 @@ class EnvSettings(BaseSettings):
     companies_file: str = str(ROOT / "config" / "companies.yaml")
     fastembed_cache: str = str(ROOT / "models" / "fastembed")
     embedder: str = "fastembed"  # fastembed | fake (tests)
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def _strip(cls, v: object) -> object:
+        """Tolerate stray spaces/quotes around values in .env (e.g. `LLM_API_KEY= gsk_...`)."""
+        return v.strip().strip('"').strip("'").strip() if isinstance(v, str) else v
 
 
 class ModelsCfg(BaseModel):
@@ -167,7 +173,7 @@ def _dotenv_values() -> dict[str, str]:
         for line in dotenv.read_text(encoding="utf-8").splitlines():
             if "=" in line and not line.lstrip().startswith("#"):
                 k, v = line.split("=", 1)
-                out[k.strip()] = v.strip()
+                out[k.strip()] = v.strip().strip("\"'").strip()
     return out
 
 
