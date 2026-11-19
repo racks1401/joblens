@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.config import ROOT, get_settings  # noqa: E402
 from app.ingest.http import PoliteClient  # noqa: E402
 from app.ingest.normalize import location_matches  # noqa: E402
+from app.ingest.role_family import TECH_FAMILIES, classify_role  # noqa: E402
 from app.ingest.seniority import classify  # noqa: E402
 from scripts.verify_companies import FETCH, jobs_of, loc_of  # noqa: E402
 
@@ -82,22 +83,68 @@ CANDIDATES: dict[str, list[str]] = {
 }
 
 
+# Round 3: India engineering boards. First group: tokens seen in real public posting URLs (web search,
+# 2026-11-19); the rest are candidates. Lever slugs can be case-sensitive, so variants are tried.
+CANDIDATES_R3: dict[str, list[str]] = {
+    "Enterpret": ["greenhouse:enterpret"], "CloudSEK": ["greenhouse:cloudsek"], "100ms": ["lever:100ms"],
+    "Fi (epiFi)": ["lever:epifi"], "Stable Money": ["lever:stable-money1", "lever:stable-money"],
+    "Acceldata": ["lever:acceldata"], "Sprinto (Lever)": ["lever:Sprinto"], "zAIMLer": ["lever:zaimler"],
+    "ConverseNow": ["lever:ConverseNow", "lever:conversenow"], "ValGenesis": ["lever:valgenesis"],
+    "Loop AI": ["lever:Loop AI", "lever:loopai"], "AiDash": ["greenhouse:aidash", "lever:aidash", "ashby:aidash"],
+    "Asha Health": ["ashby:asha-health", "ashby:ashahealth", "greenhouse:ashahealth"], "Kulfi": ["ashby:kulfi", "lever:kulfi"],
+    "Apna": ["lever:apna", "greenhouse:apna"], "SymphonyAI": ["greenhouse:symphonyai", "lever:symphonyai"],
+    "Cohesity": ["greenhouse:cohesity", "lever:cohesity"], "Inflection.io": ["lever:inflection", "ashby:inflection"],
+    "Magnit": ["greenhouse:magnit", "lever:magnit"],
+    # India engineering centres / startups (candidates)
+    "Media.net": ["greenhouse:medianet", "lever:medianet"], "Nutanix": ["greenhouse:nutanix", "lever:nutanix"],
+    "Gupshup": ["greenhouse:gupshup"], "LambdaTest": ["lever:lambdatest", "greenhouse:lambdatest"],
+    "Testsigma": ["lever:testsigma"], "Procore": ["greenhouse:procore"], "Infoblox": ["greenhouse:infoblox"],
+    "Neo4j": ["greenhouse:neo4j"], "Dremio": ["greenhouse:dremio"], "Starburst": ["greenhouse:starburst"],
+    "JFrog": ["greenhouse:jfrog"], "ChargePoint": ["greenhouse:chargepoint"], "PayU": ["greenhouse:payu", "lever:payu"],
+    "Careem": ["greenhouse:careem"], "Delivery Hero": ["greenhouse:deliveryhero"], "Rapyd": ["greenhouse:rapyd"],
+    "Adyen": ["greenhouse:adyen"], "Leena AI": ["lever:leenaai", "ashby:leena"], "Wadhwani AI": ["lever:wadhwaniai"],
+    "Sigmoid": ["greenhouse:sigmoid"], "Tredence": ["greenhouse:tredence"], "Quizizz": ["lever:quizizz", "greenhouse:quizizz"],
+    "Hotstar": ["greenhouse:hotstar", "lever:hotstar"], "Myntra": ["greenhouse:myntra"], "Swiggy (GH)": ["greenhouse:swiggy"],
+    "Zomato (GH)": ["greenhouse:zomato"], "PhonePe (Lever)": ["lever:phonepe"], "Groww (Lever)": ["lever:groww"],
+    "Unacademy (GH)": ["greenhouse:unacademy"], "upGrad (GH)": ["greenhouse:upgrad"], "Licious (GH)": ["greenhouse:licious"],
+    "Urban Company (GH)": ["greenhouse:urbancompany"], "Uber India": ["greenhouse:uberindia"], "Atlassian (Lever)": ["lever:atlassian"],
+    "Rippling (GH)": ["greenhouse:rippling"], "Visa (GH)": ["greenhouse:visa"], "Mastercard (GH)": ["greenhouse:mastercard"],
+    "Expedia (GH)": ["greenhouse:expedia"], "Wix": ["greenhouse:wix"], "monday.com": ["greenhouse:mondaycom", "ashby:monday"],
+    "Freshworks (Lever)": ["lever:freshworks"], "Zeta (GH)": ["greenhouse:zetasuite"], "Juspay (GH)": ["greenhouse:juspay"],
+    "Slice (GH)": ["greenhouse:slice"], "Jupiter (GH)": ["greenhouse:jupiter"], "CRED (GH)": ["greenhouse:dreamplug"],
+    "BrowserStack (GH)": ["greenhouse:browserstackinc"], "Postman (Ashby)": ["ashby:postman"], "Hasura (GH)": ["greenhouse:hasurainc"],
+    "Atlan (Lever)": ["lever:atlan-2"], "Fyllo": ["lever:fyllo"], "Dezerv": ["lever:dezerv", "ashby:dezerv"],
+    "Jar (Lever)": ["lever:jar-app", "lever:changejarapp"], "Zolve (Ashby)": ["ashby:zolve-1"], "Even Healthcare": ["lever:even", "ashby:even"],
+    "Pine Labs (GH)": ["greenhouse:pinelabs"], "Razorpay (Lever)": ["lever:razorpay-2"], "Ultrahuman (GH)": ["greenhouse:ultrahuman"],
+    "Hevo (GH)": ["greenhouse:hevodata"], "DevRev": ["ashby:devrev", "greenhouse:devrev", "lever:devrev"],
+    "Sarvam (Lever)": ["lever:sarvam-ai"], "Gan.ai": ["ashby:gan", "lever:ganai"], "Rocketlane (GH)": ["greenhouse:rocketlane"],
+    "Neysa (GH)": ["greenhouse:neysa"], "Simplismart": ["ashby:simplismart", "lever:simplismart"], "Portkey": ["ashby:portkey"],
+    "Supermemory": ["ashby:supermemory"], "Pipeshift": ["ashby:pipeshift"], "Lyzr": ["ashby:lyzr", "lever:lyzr"],
+    "Bhanzu": ["lever:bhanzu", "ashby:bhanzu"], "Scaler (Ashby)": ["ashby:scaler"], "Ola Krutrim (GH)": ["greenhouse:krutrim"],
+}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--min-fresher", type=int, default=1)
+    ap.add_argument("--round", type=int, default=2, help="2 = fresher boards, 3 = India engineering boards (tech roles only)")
     args = ap.parse_args()
     s = get_settings()
     existing = yaml.safe_load((ROOT / "config" / "companies.yaml").read_text(encoding="utf-8")) or []
     have = {(e["source"], e["token"]) for e in existing} | {e["name"].lower() for e in existing}
     cl = PoliteClient(s.cfg.ingest.user_agent, rps=s.cfg.ingest.requests_per_second, timeout_s=15, retries=2)
     probes, kept = [], []
-    for name, specs in CANDIDATES.items():
+    candidates = CANDIDATES_R3 if args.round == 3 else CANDIDATES
+    tried = {(r["source"], r["token"]) for r in json.loads((ROOT / "config" / "companies_verification.json").read_text(encoding="utf-8"))}
+    for name, specs in candidates.items():
         if name.lower() in have:
             continue
         for spec in specs:
             source, token = spec.split(":", 1)
             if (source, token) in have:
                 break
+            if (source, token) in tried:
+                continue
             status, data = FETCH[source](cl, token)
             jobs = jobs_of(source, data) if status == 200 else None
             ir = [j for j in jobs or [] if location_matches(loc_of(source, j), s.cfg.ingest)]
@@ -108,11 +155,12 @@ def main() -> None:
             def desc(j: dict) -> str:
                 return str(j.get("descriptionPlain") or "")  # Greenhouse list has no content: title-only
 
-            fresh = [j for j in ir if classify(title(j), desc(j))[0]]
+            fresh = [j for j in ir if classify(title(j), desc(j))[0]
+                     and (args.round < 3 or classify_role(title(j))[0] in TECH_FAMILIES)]
             india = sum(1 for j in fresh if any(k in (loc_of(source, j) or "").lower() for k in s.cfg.ingest.india_keywords))
             rec = {"name": name, "source": source, "token": token, "status": status, "valid_payload": jobs is not None,
                    "total_jobs": len(jobs or []), "india_or_remote_jobs": len(ir), "fresher_india_or_remote_jobs": len(fresh),
-                   "fresher_india_jobs": india, "checked_at": datetime.now(UTC).isoformat(timespec="seconds"), "round": 2}
+                   "fresher_india_jobs": india, "checked_at": datetime.now(UTC).isoformat(timespec="seconds"), "round": args.round}
             probes.append(rec)
             print(f"{status:>3} {source:<10} {token:<28} total={rec['total_jobs']:<4} india/remote={len(ir):<4} fresher={len(fresh)}",
                   flush=True)
@@ -128,8 +176,10 @@ def main() -> None:
               "country_hint": "IN" if r["fresher_india_jobs"] else "REMOTE"} for r in kept]
     text = (ROOT / "config" / "companies.yaml").read_text(encoding="utf-8").rstrip("\n")
     if added:
-        text += (f"\n# Round 2 ({datetime.now(UTC).date()}, scripts/verify_more_companies.py): HTTP 200 and >= "
-                 f"{args.min_fresher} fresher-relevant India/remote job(s).\n" + yaml.safe_dump(added, sort_keys=False))
+        what = "tech-family (engineering/data_ml/product) " if args.round == 3 else ""
+        text += (f"\n# Round {args.round} ({datetime.now(UTC).date()}, scripts/verify_more_companies.py): HTTP 200 and >= "
+                 f"{args.min_fresher} fresher-relevant {what}India/remote job(s).\n"
+                 + yaml.safe_dump(added, sort_keys=False))
     (ROOT / "config" / "companies.yaml").write_text(text.rstrip("\n") + "\n", encoding="utf-8")
     ok = sum(p["status"] == 200 and p["valid_payload"] for p in probes)
     print(f"\nprobed={len(probes)} ok200={ok} added={len(added)} fresher_jobs_on_added_boards="

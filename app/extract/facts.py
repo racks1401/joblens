@@ -256,6 +256,9 @@ def process_jobs(s: Session, job_ids: Sequence[int], llm: LLMClient | None = Non
             out["errors"] = out.get("errors", 0) + 1
             continue  # facts left as they were, so `--stale` retries this job next time
         store_facts(s, jid, r)
+        from app.ingest.role_family import classify_role
+
+        job.role_family, job.role_reason = classify_role(job.title, r.facts.required_skills.value)
         s.commit()
         out["valid" if r.valid else "invalid"] += 1
         out["evidence_dropped"] += len(r.dropped)

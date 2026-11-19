@@ -60,7 +60,7 @@ def test_select_jobs_cap_prefers_india(monkeypatch: pytest.MonkeyPatch) -> None:
     s = get_settings()
     s.cfg.ingest.max_jobs_per_company = 2
     jobs = [
-        NormalizedJob(source="lever", source_job_id=str(i), company="C", title="T", location_raw=loc,
+        NormalizedJob(source="lever", source_job_id=str(i), company="C", title="Software Engineer", location_raw=loc,
                       description_text="d", posted_at=datetime(2026, 1, i + 1, tzinfo=UTC), fetched_at=NOW)
         for i, loc in enumerate(["Remote", "Pune, India", "Remote", "Berlin", "Bengaluru"])
     ]

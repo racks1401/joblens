@@ -52,7 +52,11 @@ class Job(Base):
     seniority_reason: Mapped[str | None] = mapped_column(Text)
     is_india_eligible: Mapped[bool] = mapped_column(Boolean, server_default="true", default=True)
     location_reason: Mapped[str | None] = mapped_column(Text)
-    in_scope: Mapped[bool] = mapped_column(Boolean, Computed("is_fresher_relevant AND is_india_eligible", persisted=True))
+    role_family: Mapped[str] = mapped_column(Text, server_default="other", default="other")
+    role_reason: Mapped[str | None] = mapped_column(Text)
+    in_scope: Mapped[bool] = mapped_column(Boolean, Computed(
+        "is_fresher_relevant AND is_india_eligible AND role_family IN ('engineering', 'data_ml', 'product')",
+        persisted=True))
     fts: Mapped[Any] = mapped_column(
         TSVECTOR,
         Computed("to_tsvector('english', coalesce(search_text, title || ' ' || description_text))", persisted=True),

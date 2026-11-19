@@ -22,6 +22,7 @@ from app.ingest import ashby, greenhouse, lever
 from app.ingest.common import FetchResult
 from app.ingest.http import PoliteClient
 from app.ingest.normalize import location_matches
+from app.ingest.role_family import TECH_FAMILIES, classify_role
 from app.ingest.seniority import classify
 from app.ingest.store import upsert_company
 from app.logs import log_event, setup_logging
@@ -47,6 +48,11 @@ def make_client(s: Settings, **kw: Any) -> PoliteClient:
     return PoliteClient(i.user_agent, rps=i.requests_per_second, timeout_s=i.timeout_s, retries=i.retries, **kw)
 
 
+def in_target(j: NormalizedJob) -> bool:
+    """New jobs worth storing: fresher-relevant and a tech role family (engineering, data_ml, product)."""
+    return classify(j.title, j.description_text)[0] and classify_role(j.title)[0] in TECH_FAMILIES
+
+
 def select_jobs(jobs: list[NormalizedJob], s: Settings, known_ids: set[str] | None = None) -> list[NormalizedJob]:
     """Keep India/remote jobs with text, then apply the per-company cap to NEW jobs only.
 
@@ -57,10 +63,10 @@ def select_jobs(jobs: list[NormalizedJob], s: Settings, known_ids: set[str] | No
     known_ids = known_ids or set()
     kept = [j for j in jobs if j.title and j.description_text and location_matches(j.location_raw, cfg)]
     if not cfg.max_jobs_per_company:
-        return [j for j in kept if j.source_job_id in known_ids or classify(j.title, j.description_text)[0]]
+        return [j for j in kept if j.source_job_id in known_ids or in_target(j)]
     known = [j for j in kept if j.source_job_id in known_ids]
     # New jobs: only fresher-relevant ones are added (senior roles already stored are kept, marked).
-    new = [j for j in kept if j.source_job_id not in known_ids and classify(j.title, j.description_text)[0]]
+    new = [j for j in kept if j.source_job_id not in known_ids and in_target(j)]
 
     def india(j: NormalizedJob) -> bool:
         loc = (j.location_raw or "").lower()
@@ -69,7 +75,7 @@ def select_jobs(jobs: list[NormalizedJob], s: Settings, known_ids: set[str] | No
     oldest = datetime.min.replace(tzinfo=UTC)
     new.sort(key=lambda j: (not india(j), -(j.posted_at or oldest).timestamp(), j.source_job_id))
     # The cap counts fresher-relevant jobs only: stored senior rows are refreshed but take no slot.
-    known_fresher = sum(1 for j in known if classify(j.title, j.description_text)[0])
+    known_fresher = sum(1 for j in known if in_target(j))
     return known + new[: max(0, cfg.max_jobs_per_company - known_fresher)]
 
 

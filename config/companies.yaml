@@ -442,3 +442,60 @@
   source: ashby
   token: sierra
   country_hint: REMOTE
+# Round 3 (2026-11-19, scripts/verify_more_companies.py): HTTP 200 and >= 1 fresher-relevant tech-family (engineering/data_ml/product) India/remote job(s).
+- name: CloudSEK
+  source: greenhouse
+  token: cloudsek
+  country_hint: IN
+- name: Sigmoid
+  source: greenhouse
+  token: sigmoid
+  country_hint: IN
+- name: Enterpret
+  source: greenhouse
+  token: enterpret
+  country_hint: IN
+- name: Stable Money
+  source: lever
+  token: stable-money1
+  country_hint: IN
+- name: ConverseNow
+  source: lever
+  token: ConverseNow
+  country_hint: IN
+- name: 100ms
+  source: lever
+  token: 100ms
+  country_hint: IN
+- name: ValGenesis
+  source: lever
+  token: valgenesis
+  country_hint: IN
+- name: Loop AI
+  source: lever
+  token: Loop AI
+  country_hint: IN
+- name: Starburst
+  source: greenhouse
+  token: starburst
+  country_hint: IN
+- name: ChargePoint
+  source: greenhouse
+  token: chargepoint
+  country_hint: IN
+- name: Acceldata
+  source: lever
+  token: acceldata
+  country_hint: IN
+- name: zAIMLer
+  source: lever
+  token: zaimler
+  country_hint: IN
+- name: Neo4j
+  source: greenhouse
+  token: neo4j
+  country_hint: IN
+- name: Adyen
+  source: greenhouse
+  token: adyen
+  country_hint: IN

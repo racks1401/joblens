@@ -9,6 +9,7 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from app.ingest.normalize import content_hash, norm_key
+from app.ingest.role_family import classify_role
 from app.ingest.seniority import classify
 from app.models import Job, JobFactsRow
 from app.schemas import NormalizedJob
@@ -56,6 +57,7 @@ def upsert_job(s: Session, nj: NormalizedJob, now: datetime, window_days: int = 
         )
         row.is_fresher_relevant, row.seniority_reason = classify(nj.title, nj.description_text)
         row.is_india_eligible, row.location_reason = _eligibility(nj.location_raw)
+        row.role_family, row.role_reason = classify_role(nj.title)
         s.add(row)
         s.flush()
         return row, "new"
@@ -66,6 +68,7 @@ def upsert_job(s: Session, nj: NormalizedJob, now: datetime, window_days: int = 
     if row.content_hash != h:
         row.company, row.title, row.description_text, row.content_hash = nj.company, nj.title, nj.description_text, h
         row.is_fresher_relevant, row.seniority_reason = classify(nj.title, nj.description_text)
+        row.role_family, row.role_reason = classify_role(nj.title)
         # Facts extracted from the old text no longer have evidence in the new text: drop them so the
         # job is re-extracted (pipeline step, or `python -m app.pipeline --stale` later).
         s.execute(delete(JobFactsRow).where(JobFactsRow.job_id == row.id))
