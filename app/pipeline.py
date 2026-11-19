@@ -89,7 +89,10 @@ def main() -> None:
              .order_by(priority, india, Job.id))
         if args.stale:
             q = q.where(or_(JobFactsRow.job_id.is_(None), JobFactsRow.model != model,
-                            JobFactsRow.prompt_version != st.cfg.prompts.facts, JobFactsRow.valid.is_(False)))
+                            JobFactsRow.prompt_version != case(
+                                (Job.source == "paste", st.cfg.prompts.facts_paste or st.cfg.prompts.facts),
+                                else_=st.cfg.prompts.facts),
+                            JobFactsRow.valid.is_(False)))
         elif not args.all:
             q = q.where(JobFactsRow.job_id.is_(None))
         ids = list(s.execute(q).scalars())[: args.limit or None]

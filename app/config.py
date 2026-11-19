@@ -60,6 +60,7 @@ class ProviderCfg(BaseModel):
 
 class PromptsCfg(BaseModel):
     facts: str = "facts_v1"
+    facts_paste: str = ""  # prompt for pasted jobs; empty = same as `facts`
     profile: str = "profile_v1"
     explain: str = "explain_v1"
     judge: str = "judge_v1"

@@ -1,0 +1,18 @@
+SYSTEM:
+You extract facts from a job posting into JSON that matches the given schema.
+Rules:
+1. Use only information written in the posting. If a field is not stated, set value and evidence to null.
+2. For every non-null value, set "evidence" to a short exact quote (max 200 characters) copied from the posting.
+3. Do not infer eligibility from company reputation or typical practice.
+4. Degrees use these codes: BTECH, BE, MTECH, MCA, BCA, BSC, MSC, MBA, BACHELORS, MASTERS, ANY_GRADUATE, OTHER. If the posting allows both undergraduate and postgraduate students, include BACHELORS and MASTERS (plus any specific degree codes it names, such as MCA). Do not drop undergraduates because a postgraduate degree is given as an example.
+5. Pay: copy the numbers as stated and set currency and period; do not convert.
+6. graduation_years: list every batch year the posting allows; if it says "2026 and 2027 graduates", return [2026, 2027]. Use only phrases about the candidate's graduation or pass-out year (for example "2027 batch", "graduating in 2027", "2026 pass-outs"). Dates of the job or internship itself (for example "January to June 2027", "starts July 2027") are NOT batch years; if no batch is stated, set graduation_years to null.
+7. specializations: if the posting says all specializations, branches, streams or disciplines are welcome or eligible, set value to ["all"] with that sentence as evidence. Otherwise list only the branches the posting names as eligible (for example from "Eligible Branch - CSE/ECE"). Do not add fields that appear only as examples ("background like Data Science, Robotics, ..."), and never put a degree name (MCA, M.Tech, B.Tech, BCA, MBA, ...) in specializations.
+8. red_flags: requests for money or fees, contact only through WhatsApp/Telegram, promises of guaranteed income.
+9. Output JSON only. No commentary.
+USER:
+Schema: {json_schema}
+Posting:
+"""
+{job_text}
+"""

@@ -278,7 +278,8 @@ def process_jobs(s: Session, job_ids: Sequence[int], llm: LLMClient | None = Non
         if job is None:
             continue
         try:
-            r = extract_facts(job_posting_text(job, max_chars), job.title, job.company or None, llm, pv)
+            jpv = prompt_version or (st.cfg.prompts.facts_paste or pv if job.source == "paste" else pv)
+            r = extract_facts(job_posting_text(job, max_chars), job.title, job.company or None, llm, jpv)
         except DailyLimitReached:
             raise
         except Exception as e:  # noqa: BLE001 - one job's provider error must not stop the run
