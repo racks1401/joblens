@@ -606,4 +606,35 @@ proposal: add it as an anonymized `p00` (no name) before drafting.
    2.48M) and the answer does not say so; c05/c09 recommend senior-coded roles ([IC4], [IC3]) and a role listed for
    EST/Europe. c02 (JNJ TLDP), c06, c10 (no Google job, says so) are correct.
 
+## Session 14 (2026-11-19/20) — agent honesty fixes, data fixes, run 3
+
+1. **Tool-level fixes** (commit 55f0fdb): compare_jobs returns per job `needs_checking` / `failed` (same as
+   check_eligibility); get_job and compare_jobs return a `trust` block with level, `scam_rules_fired`, `ghost_signals`
+   and `posting_red_flags` (empty list = checked, none fired; null = not computed); search_jobs returns the verdict
+   plus scam/ghost codes per result and `jobs_returned`. Token budgets are per purpose (`budget.per_purpose`: agent
+   180K, summary 20K, explain 40K; others 300K each), so extraction never counts against the agent. The agent turn
+   itself is now budgeted. A skipped explanation is added to the answer in code if the model leaves it out. New
+   prompt `agent_v2` (agent_v1 kept for runs 1-2).
+2. **Data fixes**:
+   - Seniority: IC3+ level codes ([IC3], IC4, IC-5); L4+ was already handled. #1237 and #1238 (Sourcegraph) left scope,
+     111 → **109**.
+   - India rule: time-zone/region working-hours limits (EST/PST/CET..., "US / European / Americas time zones")
+     restrict open-remote jobs unless India/IST is named. The dry run found 5 jobs (#455, #456, #940, #1237, #1238),
+     none in scope; in-scope jobs saying "every time zone" are unaffected. Applied; in scope stays 109.
+   - Pay: non-INR pay stays in its own currency in tool outputs and eligibility messages (no rupee monthly figure);
+     the comparison with your minimum is labeled approximate.
+3. **Grounding check**: real profile values (CGPA, batch year, years, min pay) and numbers from the user's own message
+   in that turn are accepted and listed; the strict tools-only result is reported too. New: every listed job must
+   show the verdict its tool returned (missing or mismatched verdicts fail).
+4. **Run 3** (`evals/results/agent_run3/`, runs 1-2 kept in agent_run1/ and agent_run2/): 15 conversations (10 old +
+   5 honesty tests), 84,521 tokens. Grounding check: **14/15** (tools-only 14/15). The failure is c15 turn 2, which
+   did not run: the agent budget was reached (180,336 of 180,000; Groq's limit was not hit). **1 turn is left**
+   ("show jobs in my preferred city"), runnable after 00:00 UTC.
+   **Manual review** (`agent_run3/manual_review.md`, Claude's reading; Ravi's pending): 6 correct (c03, c06, c09,
+   c10, c11, c14), 3 minor (c07, c08, c12), 5 wrong (c01, c02, c04, c05, c13), 1 incomplete (c15). Main remaining
+   failure: the agent copies one checked job's failed/needs_checking list onto jobs it never checked (c01, c04,
+   c05); c13 states "pay not stated" for jobs it did not fetch (true in the DB, but not from tools); c02 regressed
+   (no check_eligibility call, wrong job count). Proposed, not applied: search_jobs returns needs_checking/failed per
+   result, and the grounding check compares rule names per job id.
+
 ## Not started: P7.

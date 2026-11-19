@@ -1,0 +1,149 @@
+{
+ "id": "c10",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "am I eligible for the Google SDE role?",
+   "result": {
+    "session_id": "972f81ce-3597-4954-8d36-aae6e083ee02",
+    "answer": "The database does not contain a Google SDE posting, so I cannot evaluate eligibility for that role.\n\nI checked 6 jobs in the search (6 jobs returned / 6 jobs compared).",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "Google SDE",
+       "filters": {
+        "employment_type": null,
+        "work_mode": null,
+        "location": null,
+        "min_monthly_pay_inr": null,
+        "fresher_only": false,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 53.3,
+      "result_chars": 1782,
+      "error": null,
+      "output": {
+       "jobs_returned": 6,
+       "results": [
+        {
+         "job_id": 1254,
+         "title": "SDE II - Data Engineer",
+         "company": "InMobi",
+         "location": "Lucknow",
+         "final_score": 73,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://job-boards.greenhouse.io/inmobi/jobs/7747785"
+        },
+        {
+         "job_id": 360,
+         "title": "SDE I",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "final_score": 57,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [
+          "age_60"
+         ],
+         "url": "https://jobs.lever.co/hevodata/6cbbe304-e065-4711-bf3e-756795d2bc2a"
+        },
+        {
+         "job_id": 1280,
+         "title": "Applied AI Research Engineer",
+         "company": "Enterpret",
+         "location": "Bengaluru / Bangalore",
+         "final_score": 54,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [
+          "age_120"
+         ],
+         "url": "https://job-boards.greenhouse.io/enterpret/jobs/7580532003"
+        },
+        {
+         "job_id": 341,
+         "title": "Associate SDE",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "final_score": 44,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://jobs.lever.co/hevodata/4eccaf98-ba19-42ea-b040-e0976d4dadfe"
+        },
+        {
+         "job_id": 1125,
+         "title": "Software Engineer (CPD) - Winter Intern",
+         "company": "Rubrik",
+         "location": "Bangalore / Bangalore, India Office",
+         "final_score": 42,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [
+          "age_60"
+         ],
+         "url": "https://www.rubrik.com/company/careers/departments/job.8166537?gh_jid=8166537"
+        }
+       ],
+       "name_matches": [
+        {
+         "job_id": 350,
+         "title": "Associate Software Development Engineer (SDE) Intern",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://jobs.lever.co/hevodata/993a3ed3-3014-432f-b0f4-28d300d58d9a"
+        }
+       ],
+       "excluded_companies": null
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [],
+     "numbers_checked": [],
+     "skipped_small_numbers": 3,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "verdict_missing": [],
+     "verdict_mismatch": [],
+     "accepted_from_profile": [],
+     "accepted_from_user_message": [],
+     "ok_tools_only": true
+    },
+    "tokens": {
+     "in": 2890,
+     "out": 131,
+     "total": 3021
+    },
+    "llm_calls": 2,
+    "explanations_skipped": [],
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 1.8
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Bengaluru"
+  ]
+ }
+}

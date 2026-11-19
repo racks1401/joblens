@@ -1,0 +1,112 @@
+{
+ "id": "c15",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "remember that I prefer Hyderabad",
+   "result": {
+    "session_id": "5e98f285-50fb-4ea2-8452-d5bbcd93c504",
+    "answer": "Preference saved: preferred_locations = [\"Hyderabad\"].",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "remember",
+      "args": {
+       "key": "preferred_locations",
+       "value": [
+        "Hyderabad"
+       ]
+      },
+      "ms": 2.7,
+      "result_chars": 47,
+      "error": null,
+      "output": {
+       "saved": {
+        "preferred_locations": [
+         "Hyderabad"
+        ]
+       }
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [],
+     "numbers_checked": [],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "verdict_missing": [],
+     "verdict_mismatch": [],
+     "accepted_from_profile": [],
+     "accepted_from_user_message": [],
+     "ok_tools_only": true
+    },
+    "tokens": {
+     "in": 2345,
+     "out": 72,
+     "total": 2417
+    },
+    "llm_calls": 2,
+    "explanations_skipped": [],
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 1.2
+  },
+  {
+   "user": "show jobs in my preferred city",
+   "result": {
+    "session_id": "5e98f285-50fb-4ea2-8452-d5bbcd93c504",
+    "answer": "I could not finish this request: llm_limit: BudgetExceeded: Daily token budget for 'agent' reached (180336 of 180000 tokens); this step was skipped.. Nothing below is a recommendation; please try again later.",
+    "tool_trace": [],
+    "grounding": {
+     "ok": false,
+     "job_ids_checked": [],
+     "numbers_checked": [
+      "180336",
+      "180000"
+     ],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [
+      {
+       "value": "180336",
+       "kind": "other",
+       "context": "n budget for 'agent' reached (180336 of 180000 toke"
+      },
+      {
+       "value": "180000",
+       "kind": "other",
+       "context": "or 'agent' reached (180336 of 180000 tokens); this"
+      }
+     ],
+     "jobs_named_without_id": [],
+     "verdict_missing": [],
+     "verdict_mismatch": [],
+     "accepted_from_profile": [],
+     "accepted_from_user_message": [],
+     "ok_tools_only": false
+    },
+    "tokens": {
+     "in": 0,
+     "out": 0,
+     "total": 0
+    },
+    "llm_calls": 0,
+    "explanations_skipped": [],
+    "stop": "llm_limit: BudgetExceeded: Daily token budget for 'agent' reached (180336 of 180000 tokens); this step was skipped.",
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 0.0
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Hyderabad"
+  ]
+ }
+}

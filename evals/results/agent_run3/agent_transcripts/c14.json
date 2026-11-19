@@ -1,0 +1,135 @@
+{
+ "id": "c14",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "tell me about jobs at Zerodha",
+   "result": {
+    "session_id": "3c197201-57a2-4e6e-9457-60a702d25669",
+    "answer": "I’m sorry, but there are no Zerodha job postings in the current database.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "Zerodha",
+       "filters": {
+        "employment_type": null,
+        "work_mode": null,
+        "location": null,
+        "min_monthly_pay_inr": null,
+        "fresher_only": false,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 32.0,
+      "result_chars": 1438,
+      "error": null,
+      "output": {
+       "jobs_returned": 5,
+       "results": [
+        {
+         "job_id": 1282,
+         "title": "APM - Technical",
+         "company": "Stable Money",
+         "location": "Bengaluru",
+         "final_score": 98,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://jobs.lever.co/stable-money1/86113214-0340-42ed-8350-6de20fa53f85"
+        },
+        {
+         "job_id": 1296,
+         "title": "AI | App Development | Web Development",
+         "company": "SpectoVX Assistive Technology Pvt. Ltd.",
+         "location": null,
+         "final_score": 87,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": null
+        },
+        {
+         "job_id": 1123,
+         "title": "Embedded Data Scientist, Chanakya",
+         "company": "Sarvam AI",
+         "location": "Delhi",
+         "final_score": 70,
+         "eligibility": "INELIGIBLE",
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [
+          "age_120"
+         ],
+         "url": "https://jobs.ashbyhq.com/sarvam/dc047f4f-97be-4bb3-a9f1-cebbfc4de3e6"
+        },
+        {
+         "job_id": 1280,
+         "title": "Applied AI Research Engineer",
+         "company": "Enterpret",
+         "location": "Bengaluru / Bangalore",
+         "final_score": 70,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [
+          "age_120"
+         ],
+         "url": "https://job-boards.greenhouse.io/enterpret/jobs/7580532003"
+        },
+        {
+         "job_id": 772,
+         "title": "Security Engineer Intern",
+         "company": "FamPay",
+         "location": "Bengaluru",
+         "final_score": 67,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://jobs.lever.co/fampay/bbbbbfd2-1855-4991-82d5-84ef57607c24"
+        }
+       ],
+       "name_matches": null,
+       "excluded_companies": null
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [],
+     "numbers_checked": [],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "verdict_missing": [],
+     "verdict_mismatch": [],
+     "accepted_from_profile": [],
+     "accepted_from_user_message": [],
+     "ok_tools_only": true
+    },
+    "tokens": {
+     "in": 2773,
+     "out": 89,
+     "total": 2862
+    },
+    "llm_calls": 2,
+    "explanations_skipped": [],
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 2.4
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Bengaluru"
+  ]
+ }
+}

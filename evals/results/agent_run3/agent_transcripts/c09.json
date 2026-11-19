@@ -1,0 +1,227 @@
+{
+ "id": "c09",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "full-time roles paying at least 50000 a month",
+   "result": {
+    "session_id": "a77361e3-f7a0-4a75-8620-8fce27081287",
+    "answer": "TLDP (Technology Leadership Development Program), Johnson & Johnson (job_id: 1303) — CHECK  \nEligibility details to check: graduation_year, location.  \n\nPay: ₹1,565,000 per year (≈ ₹130,417 per month).  \nLocation: Hyderabad (you prefer Bengaluru).  \n\nTrust: no scam signals or red‑flags detected.  \n\nJobs checked: 1 / 1.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "",
+       "filters": {
+        "min_monthly_pay_inr": 50000,
+        "employment_type": "Full-time"
+       },
+       "limit": 5
+      },
+      "ms": 0.0,
+      "result_chars": 0,
+      "error": "provider rejected arguments",
+      "output": {
+       "error": "[`/query`: minLength: got 0, want 1]"
+      }
+     },
+     {
+      "step": 1,
+      "tool": "search_jobs",
+      "args": {
+       "query": "software engineer",
+       "filters": {
+        "employment_type": "full_time",
+        "work_mode": null,
+        "location": null,
+        "min_monthly_pay_inr": 50000,
+        "fresher_only": false,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 52.4,
+      "result_chars": 308,
+      "error": null,
+      "output": {
+       "jobs_returned": 1,
+       "results": [
+        {
+         "job_id": 1303,
+         "title": "TLDP (Technology Leadership Development Program)",
+         "company": "Johnson & Johnson",
+         "location": null,
+         "final_score": 10,
+         "eligibility": "CHECK",
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": null
+        }
+       ],
+       "name_matches": null,
+       "excluded_companies": null
+      }
+     },
+     {
+      "step": 2,
+      "tool": "get_job",
+      "args": {
+       "job_id": 1303
+      },
+      "ms": 3.2,
+      "result_chars": 694,
+      "error": null,
+      "output": {
+       "job_id": 1303,
+       "title": "TLDP (Technology Leadership Development Program)",
+       "company": "Johnson & Johnson",
+       "url": null,
+       "location": null,
+       "type": "full_time",
+       "work_mode": null,
+       "locations": [
+        "Hyderabad"
+       ],
+       "pay": {
+        "min": 1565000.0,
+        "max": 1565000.0,
+        "currency": "INR",
+        "period": "year",
+        "inr_per_month": 130417
+       },
+       "duration_months": null,
+       "degrees": [
+        "BACHELORS",
+        "MASTERS",
+        "MCA",
+        "MTECH"
+       ],
+       "branches": [
+        "computer science",
+        "electronics",
+        "electrical engineering",
+        "mathematics and computing"
+       ],
+       "batch": null,
+       "min_cgpa": 7.5,
+       "experience_min_years": null,
+       "required_skills": [
+        "coding"
+       ],
+       "apply_deadline": "2026-11-19",
+       "ppo": null,
+       "trust": {
+        "level": "ok",
+        "score": 98,
+        "scam_rules_fired": [],
+        "ghost_signals": [],
+        "posting_red_flags": []
+       },
+       "flags": []
+      }
+     },
+     {
+      "step": 3,
+      "tool": "check_eligibility",
+      "args": {
+       "job_id": 1303
+      },
+      "ms": 2.8,
+      "result_chars": 981,
+      "error": null,
+      "output": {
+       "job_id": 1303,
+       "title": "TLDP (Technology Leadership Development Program)",
+       "company": "Johnson & Johnson",
+       "verdict": "CHECK",
+       "needs_checking": [
+        "graduation_year",
+        "location"
+       ],
+       "failed": [],
+       "rules": [
+        {
+         "rule": "degree",
+         "status": "PASS",
+         "message": "Job allows BACHELORS, MASTERS, MCA, MTECH; you have MCA"
+        },
+        {
+         "rule": "specialization",
+         "status": "PASS",
+         "message": "Job allows computer science, electronics, electrical engineering, mathematics and computing; you have AI & IoT"
+        },
+        {
+         "rule": "graduation_year",
+         "status": "UNKNOWN",
+         "message": "Job does not state batch years"
+        },
+        {
+         "rule": "cgpa",
+         "status": "PASS",
+         "message": "Job asks for 7.5 CGPA; you have 7.96"
+        },
+        {
+         "rule": "experience",
+         "status": "PASS",
+         "message": "Job gives no minimum experience"
+        },
+        {
+         "rule": "location",
+         "status": "SOFT_FAIL",
+         "message": "Job is in Hyderabad; you prefer Bengaluru"
+        },
+        {
+         "rule": "pay",
+         "status": "PASS",
+         "message": "You have no minimum pay set"
+        },
+        {
+         "rule": "employment_type",
+         "status": "PASS",
+         "message": "Job is full time; you want internship, full time"
+        }
+       ]
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [
+      1303
+     ],
+     "numbers_checked": [
+      "₹1,565,000",
+      "₹130,417"
+     ],
+     "skipped_small_numbers": 2,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "verdict_missing": [],
+     "verdict_mismatch": [],
+     "accepted_from_profile": [],
+     "accepted_from_user_message": [],
+     "ok_tools_only": true
+    },
+    "tokens": {
+     "in": 6124,
+     "out": 264,
+     "total": 6388
+    },
+    "llm_calls": 5,
+    "explanations_skipped": [],
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 60.9
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Bengaluru"
+  ]
+ }
+}
