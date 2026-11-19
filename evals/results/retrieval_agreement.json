@@ -1,0 +1,86 @@
+{
+ "groups": {
+  "p00": {
+   "n": 24,
+   "kept": 23,
+   "changed": 1,
+   "agreement": 0.9583333333333334,
+   "within_one": 24,
+   "confusion_draft_to_human": {
+    "0->0": 6,
+    "1->0": 1,
+    "1->1": 10,
+    "2->2": 7
+   }
+  },
+  "sample (other profiles)": {
+   "n": 25,
+   "kept": 23,
+   "changed": 2,
+   "agreement": 0.92,
+   "within_one": 25,
+   "confusion_draft_to_human": {
+    "0->0": 15,
+    "1->0": 1,
+    "1->1": 6,
+    "1->2": 1,
+    "2->2": 2
+   }
+  },
+  "all": {
+   "n": 49,
+   "kept": 46,
+   "changed": 3,
+   "agreement": 0.9387755102040817,
+   "within_one": 49,
+   "confusion_draft_to_human": {
+    "0->0": 21,
+    "1->0": 2,
+    "1->1": 16,
+    "1->2": 1,
+    "2->2": 9
+   }
+  }
+ },
+ "changed": [
+  {
+   "profile_id": "p00",
+   "job_key": "greenhouse:5261571007",
+   "job_id": 1053,
+   "relevance": 0,
+   "reason": "human: changed from draft 1",
+   "draft_relevance": 1,
+   "draft_reason": "2+ yrs Java and hybrid Hyderabad (outside preferred cities): two stretches, each at most 1.",
+   "decision": "set",
+   "shown": "facts",
+   "status": "human_reviewed",
+   "reviewed_at": "2026-11-19T12:43:39+00:00"
+  },
+  {
+   "profile_id": "p09",
+   "job_key": "greenhouse:8130876",
+   "job_id": 1270,
+   "relevance": 2,
+   "reason": "human: changed from draft 1",
+   "draft_relevance": 1,
+   "draft_reason": "New grad role in Bengaluru, but requires batch 2027, candidate is 2025.",
+   "decision": "set",
+   "shown": "facts",
+   "status": "human_reviewed",
+   "reviewed_at": "2026-11-19T12:50:58+00:00"
+  },
+  {
+   "profile_id": "p15",
+   "job_key": "greenhouse:8281055",
+   "job_id": 522,
+   "relevance": 0,
+   "reason": "human: changed from draft 1",
+   "draft_relevance": 1,
+   "draft_reason": "Internship but requires Masters/PhD and 2+ years experience.",
+   "decision": "set",
+   "shown": "facts",
+   "status": "human_reviewed",
+   "reviewed_at": "2026-11-19T12:54:11+00:00"
+  }
+ ]
+}
