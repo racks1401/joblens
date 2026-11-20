@@ -96,3 +96,13 @@ def test_paste_route_creates_one_job_per_role(sf, monkeypatch: pytest.MonkeyPatc
         assert all(j.company == "Acme" and j.in_scope for j in jobs)
     flagged = TestClient(create_app()).get(f"/jobs/{body['related_job_ids'][1]}").json()
     assert flagged["flags"] == ["needs human title"]
+
+
+@pytest.mark.parametrize(("heading", "title"), [
+    ("Role 1: Backend Developer Intern", "Backend Developer Intern"), ("Position #2 - QA Trainee", "QA Trainee"),
+    ("Roles and Responsibilities", "Roles and Responsibilities"), ("JJT Internship", "JJT Internship"),
+])
+def test_role_number_prefix_is_dropped_from_titles(heading: str, title: str) -> None:
+    from app.ingest.split import ROLE_PREFIX
+
+    assert (ROLE_PREFIX.sub("", heading).strip() or heading) == title

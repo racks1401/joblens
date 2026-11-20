@@ -9,6 +9,7 @@ by the model). Any invalid or single-role answer means "do not split".
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -18,6 +19,7 @@ from app.logs import log_event
 
 log = logging.getLogger("joblens.split")
 NEEDS_HUMAN_TITLE = "Needs human title"
+ROLE_PREFIX = re.compile(r"^(?:role|position|opening|profile)\s*#?\s*\d+\s*[:.)\-–]\s*", re.I)
 PROMPT = "split_v1"
 
 
@@ -77,6 +79,7 @@ def build_pieces(text: str, header: tuple[int, int] | None, footer: tuple[int, i
     out = []
     for i, (a, b, h) in enumerate(roles, 1):
         title = lines[h - 1].strip().strip("*").rstrip(":").strip() if h else NEEDS_HUMAN_TITLE
+        title = ROLE_PREFIX.sub("", title).strip() or title  # "Role 1: Backend Intern" -> "Backend Intern"
         body = take(header) + [""] + take((a, b)) + ([""] + take(footer) if footer else [])
         out.append(RolePiece(i, title or NEEDS_HUMAN_TITLE, "\n".join(body).strip("\n"), (a, b)))
     return out
