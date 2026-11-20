@@ -302,6 +302,11 @@ def compare_jobs(ctx: ToolContext, a: CompareJobsArgs) -> dict[str, Any]:
 
 
 def remember(ctx: ToolContext, a: RememberArgs) -> dict[str, Any]:
+    from app.demo import DEMO_PROFILE_ID
+
+    if ctx.profile_id == DEMO_PROFILE_ID:  # shared by every visitor of the public demo
+        return {"error": "The shared demo profile cannot store preferences. Save your own profile on the Profile "
+                         "page, then ask again."}
     v = a.value
     if a.key in ("preferred_locations", "target_roles", "avoid_companies") and isinstance(v, str):
         v = [x.strip() for x in v.split(",") if x.strip()]
