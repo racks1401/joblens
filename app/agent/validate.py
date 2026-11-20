@@ -39,6 +39,8 @@ class Grounding:
     rules_not_in_job_output: list[dict[str, Any]] = field(default_factory=list)  # rule named for a job, not in its lists
     rules_for_unchecked_job: list[dict[str, Any]] = field(default_factory=list)  # rules given, job's rules never fetched
     wrong_job_counts: list[dict[str, Any]] = field(default_factory=list)  # "checked N jobs" not matching any tool count
+    # "pay / deadline not listed" said for a job whose field is not null, or was never in this turn's tool outputs
+    unsupported_not_stated: list[dict[str, Any]] = field(default_factory=list)
     accepted_from_profile: list[str] = field(default_factory=list)  # equal to the user's real profile value
     accepted_from_user_message: list[str] = field(default_factory=list)  # the user typed this number this turn
     ok_tools_only: bool = True  # strict rule: profile / user-message values count as unsupported
@@ -180,16 +182,53 @@ def _walk_ids(v: Any, ids: set[int]) -> None:
             _walk_ids(x, ids)
 
 
+_CLAUSE_END = re.compile(r"\]|\s[—–]\s|\.\s|\.$|;|\|")
+
+
 def _rules_named(seg: str) -> set[str]:
-    """Rule names written as eligibility claims in a job's answer segment (after "needs checking", "failed", ...)."""
+    """Rule names written as eligibility claims in a job's answer segment (after "needs checking", "failed", ...),
+    up to the end of that clause (so "needs checking: cgpa — no pay listed" names cgpa only)."""
     found: set[str] = set()
     for line in seg.splitlines():
         m = RULE_CTX.search(line)
         if not m:
             continue
-        for r in _RULE_ANY.finditer(line[m.start():]):
+        rest = line[m.start():]
+        end = _CLAUSE_END.search(rest, len(m.group(0)))
+        for r in _RULE_ANY.finditer(rest[:end.start()] if end else rest):
             found |= {k for k in RULE_WORDS if r.group(k)}
     return found
+
+
+FIELD_WORDS = {"pay": r"pay|salary|stipend|ctc|compensation", "apply_deadline": r"deadline|last date|apply by"}
+_NEG = (r"not (?:listed|stated|mentioned|given|provided|specified|disclosed|available|shown)|"
+        r"does(?:n't| not) (?:state|list|mention|give|say|show)|none (?:of [\w ]+ )?(?:list|state|mention|give)s?")
+_NO_FORM = r"\bno\b[^.\n]{{0,30}}?\b(?:{w})\b[^.\n]{{0,20}}?\b(?:listed|stated|given|mentioned|provided|shown)\b"
+NOT_STATED = {k: re.compile(r"(?i)\b(?:" + w + r")\b[^.\n]{0,40}?(?:" + _NEG + r")|(?:" + _NEG
+                            + r")[^.\n]{0,40}?\b(?:" + w + r")\b|" + _NO_FORM.format(w=w))
+              for k, w in FIELD_WORDS.items()}
+
+
+def tool_fields(outputs: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
+    """job_id -> {field: value} for pay / apply_deadline, for every job whose output carried that field."""
+    out: dict[int, dict[str, Any]] = {}
+    stack: list[Any] = list(outputs)
+    while stack:
+        x = stack.pop()
+        if isinstance(x, dict):
+            if isinstance(x.get("job_id"), int):
+                for k in FIELD_WORDS:
+                    if k in x:
+                        d = out.setdefault(x["job_id"], {})
+                        d[k] = d.get(k) if d.get(k) is not None else x[k]
+            stack.extend(x.values())
+        elif isinstance(x, list):
+            stack.extend(x)
+    return out
+
+
+def _not_stated_claims(text: str) -> set[str]:
+    return {k for k, rx in NOT_STATED.items() if rx.search(text)}
 
 
 def user_numbers(text: str) -> set[float]:
@@ -277,6 +316,7 @@ def check_answer(answer: str, outputs: list[dict[str, Any]], profile_numbers: se
     # runs from the start of the line holding its id to the start of the line holding the next id.
     verdicts = tool_verdicts(outputs)
     rules_by_job = tool_rules(outputs)
+    fields = tool_fields(outputs)
     occ = sorted((sp[0], jid) for sp, jid in zip(id_spans, [int(next(x for x in m.groups() if x))
                                                             for m in ID_RX.finditer(stripped)], strict=True))
     starts = [stripped.rfind("\n", 0, pos) + 1 for pos, _ in occ]
@@ -297,11 +337,20 @@ def check_answer(answer: str, outputs: list[dict[str, Any]], profile_numbers: se
             elif named - rules_by_job[jid]:
                 g.rules_not_in_job_output.append({"job_id": jid, "rules": sorted(named - rules_by_job[jid]),
                                                   "tool": sorted(rules_by_job[jid])})
+        for fld in _not_stated_claims(seg):
+            _check_not_stated(g, fields, jid, fld, seg)
         found = _verdict_found(seg)
         if not found:
             g.verdict_missing.append(jid)
         elif verdicts[jid] not in found:
             g.verdict_mismatch.append({"job_id": jid, "tool": verdicts[jid], "answer": sorted(found)})
+    # Lines naming no job ("none of these list a salary") speak for every job in the answer.
+    for line in stripped.splitlines():
+        if ID_RX.search(line):
+            continue
+        for fld in _not_stated_claims(line):
+            for jid in dict.fromkeys(g.job_ids_checked):
+                _check_not_stated(g, fields, jid, fld, line)
     counts = tool_counts(outputs)
     for m in COUNT_RX.finditer(stripped):
         n = int(next(x for x in m.groups() if x))
@@ -309,7 +358,20 @@ def check_answer(answer: str, outputs: list[dict[str, Any]], profile_numbers: se
             g.wrong_job_counts.append({"stated": n, "tool_counts": sorted(counts), "context": m.group(0)})
     base = not (g.unsupported_job_ids or g.unsupported_numbers or g.jobs_named_without_id or g.verdict_missing
                 or g.verdict_mismatch or g.rules_not_in_job_output or g.rules_for_unchecked_job
-                or g.wrong_job_counts)
+                or g.wrong_job_counts or g.unsupported_not_stated)
     g.ok = base
     g.ok_tools_only = base and not (g.accepted_from_profile or g.accepted_from_user_message)
     return g
+
+
+def _check_not_stated(g: Grounding, fields: dict[int, dict[str, Any]], jid: int, fld: str, ctx: str) -> None:
+    have = fields.get(jid, {})
+    if fld not in have:
+        why = "field not in this turn's tool outputs"
+    elif have[fld] is not None:
+        why = f"tool has {have[fld]}"
+    else:
+        return
+    item = {"job_id": jid, "field": fld, "why": why, "context": ctx.strip()[:120]}
+    if not any(x["job_id"] == jid and x["field"] == fld for x in g.unsupported_not_stated):
+        g.unsupported_not_stated.append(item)

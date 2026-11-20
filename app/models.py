@@ -46,6 +46,7 @@ class Job(Base):
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     is_active: Mapped[bool] = mapped_column(Boolean, server_default="true", default=True)
+    expired: Mapped[bool] = mapped_column(Boolean, server_default="false", default=False)  # deadline passed
     repost_count: Mapped[int] = mapped_column(Integer, server_default="0", default=0)
     search_text: Mapped[str | None] = mapped_column(Text)
     is_fresher_relevant: Mapped[bool] = mapped_column(Boolean, server_default="true", default=True)

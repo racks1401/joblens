@@ -21,9 +21,11 @@ def matches_route(
     limit: int = Query(20, ge=1, le=50),
     show_ineligible: bool = False,
     include_out_of_scope: bool = False,
+    include_expired: bool = False,
     s: Session = Depends(get_session),
 ) -> dict[str, Any]:
     """Ranked matches with final score, eligibility (rule lines + evidence) and trust."""
     _, profile = load_profile(s, profile_id)
-    items = match(s, profile, limit=limit, show_ineligible=show_ineligible, include_out_of_scope=include_out_of_scope)
+    items = match(s, profile, limit=limit, show_ineligible=show_ineligible, include_out_of_scope=include_out_of_scope,
+                  include_expired=include_expired)
     return {"profile_id": str(profile_id), "results": [i.model_dump(mode="json") for i in items]}

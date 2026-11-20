@@ -354,12 +354,70 @@ def test_search_results_carry_rule_lists(client, session) -> None:  # type: igno
 test_search_results_carry_rule_lists = pytest.mark.db(test_search_results_carry_rule_lists)
 
 
-def test_agent_v3_prompt_rules_and_config() -> None:
-    from app.config import get_settings
+def test_agent_v3_prompt_rules() -> None:
     from app.extract.prompting import load_prompt
 
-    assert get_settings().cfg.prompts.agent == "agent_v3"
     text = load_prompt("agent_v3")[0]
     for must in ("Never copy one job's rules onto another job", "rules were not checked",
                  'Never say "no red flags"', "say how many there are", "were not checked"):
         assert must in text, must
+
+
+# ---------- run-5 fixes: job facts in search results, "not listed" claims, agent_v4 ----------
+
+def test_agent_v4_prompt_rules_and_config() -> None:
+    from app.config import get_settings
+    from app.extract.prompting import load_prompt
+
+    assert get_settings().cfg.prompts.agent == "agent_v4"
+    text = load_prompt("agent_v4")[0]
+    for must in ("pay, apply_deadline, work_mode and employment_type", 'only when that field is null',
+                 "Never copy one job's rules onto another job", "never generalize over the listed jobs",
+                 "Use a tool for every question", '"expired": true'):
+        assert must in text, must
+
+
+FACTS_OUT = [{"jobs_returned": 2, "results": [
+    {"job_id": 1, "title": "SDE Intern", "company": "A", "eligibility": "CHECK", "pay": None, "apply_deadline": None},
+    {"job_id": 2, "title": "TLDP", "company": "B", "eligibility": "CHECK",
+     "pay": {"min": 1565000, "max": 1565000, "currency": "INR", "period": "year"}, "apply_deadline": "2026-12-01"}]}]
+
+
+def test_not_listed_claim_ok_only_when_field_null() -> None:
+    g = check_answer("SDE Intern, A (job_id: 1) – CHECK – pay not listed, no deadline stated", FACTS_OUT)
+    assert g.ok and g.unsupported_not_stated == [], g.to_dict()
+    g = check_answer("TLDP, B (job_id: 2) – CHECK. No pay or deadline listed.", FACTS_OUT)
+    assert {(x["job_id"], x["field"]) for x in g.unsupported_not_stated} == {(2, "pay"), (2, "apply_deadline")}
+    assert not g.ok and "rules_not_in_job_output" not in {k for k, v in g.to_dict().items() if v}
+
+
+def test_not_listed_claim_for_unfetched_job_and_answer_wide_line() -> None:
+    out = [{"jobs_returned": 1, "results": [{"job_id": 7, "title": "SDE", "company": "X", "eligibility": "CHECK"}]}]
+    g = check_answer("SDE, X (job_id: 7) – CHECK\nNone of the postings listed a salary.", out)
+    assert g.unsupported_not_stated[0]["job_id"] == 7 and "not in this turn" in g.unsupported_not_stated[0]["why"]
+    g = check_answer("SDE Intern, A (job_id: 1) – CHECK\nTLDP, B (job_id: 2) – CHECK\nNone of these list a salary.",
+                     FACTS_OUT)
+    assert [x["job_id"] for x in g.unsupported_not_stated] == [2]
+
+
+def test_rule_scan_stops_at_clause_end() -> None:
+    from app.agent.validate import _rules_named
+
+    assert _rules_named("CHECK [needs checking: graduation_year, location] — no scam signals. No pay listed.") == {
+        "graduation_year", "location"}
+
+
+@pytest.mark.db
+def test_search_results_carry_job_facts(client, session) -> None:  # type: ignore[no-untyped-def]
+    from app.agent.tools import search_jobs
+
+    client.post("/jobs/paste", json={"text": PASTE})
+    pid, p = _profile(session)
+    out = search_jobs(ToolContext(session=session, profile_id=pid, profile=p, memory={}),
+                      SearchJobsArgs(query="zzz Example"))
+    rows = out["results"] + (out["name_matches"] or [])
+    assert rows
+    for r in rows:
+        assert {"pay", "apply_deadline", "work_mode", "employment_type"} <= r.keys()
+    r = rows[0]
+    assert r["pay"]["currency"] == "INR" and r["pay"]["inr_per_month"] == 15000 and r["employment_type"] == "internship"

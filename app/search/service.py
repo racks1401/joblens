@@ -137,8 +137,10 @@ def passes(loaded: Loaded, flt: Filters, elig: EligibilityResult | None) -> bool
 
 
 def _item(loaded: Loaded, retrieval: float, profile: Profile | None, show_ineligible: bool,
-          flt: Filters | None) -> MatchItem | None:
+          flt: Filters | None, include_expired: bool = False) -> MatchItem | None:
     cfg = get_settings().cfg.ranking
+    if loaded.job.expired and not include_expired:
+        return None
     f = loaded.facts
     elig = check_eligibility(profile, f) if profile else None
     if elig and elig.verdict == "INELIGIBLE" and not show_ineligible:
@@ -159,29 +161,31 @@ def _item(loaded: Loaded, retrieval: float, profile: Profile | None, show_inelig
 
 
 def match(s: Session, profile: Profile, limit: int = 20, show_ineligible: bool = False,
-          filters: Filters | None = None, mode: Mode = "hybrid", include_out_of_scope: bool = False) -> list[MatchItem]:
-    """Ranked matches for a profile."""
+          filters: Filters | None = None, mode: Mode = "hybrid", include_out_of_scope: bool = False,
+          include_expired: bool = False) -> list[MatchItem]:
+    """Ranked matches for a profile. Expired jobs (deadline passed) are left out unless include_expired."""
     n = get_settings().cfg.search.candidates * (4 if filters and filters.active() else 1)
     cands = retrieve(s, build_profile_query_text(profile), profile_keyword_query(profile), mode, limit=n,
                      include_out_of_scope=include_out_of_scope)
     loaded = load_jobs(s, [j for j, _ in cands])
     items = [it for j, sc in cands if j in loaded
-             if (it := _item(loaded[j], sc, profile, show_ineligible, filters)) is not None]
+             if (it := _item(loaded[j], sc, profile, show_ineligible, filters, include_expired)) is not None]
     items.sort(key=lambda x: (-x.final_score, -x.retrieval_score, x.job_id))
     return items[:limit]
 
 
 def search(s: Session, q: str, mode: Mode = "hybrid", model: str | None = None, variant: str | None = None,
            limit: int = 20, filters: Filters | None = None, profile: Profile | None = None,
-           include_out_of_scope: bool = False) -> dict[str, Any]:
-    """Free-text search. With a profile, results carry eligibility and use the final score."""
+           include_out_of_scope: bool = False, include_expired: bool = False) -> dict[str, Any]:
+    """Free-text search. With a profile, results carry eligibility and use the final score. Expired jobs are
+    left out unless include_expired."""
     t0 = time.perf_counter()
     n = get_settings().cfg.search.candidates * (4 if filters and filters.active() else 1)
     kwq = " OR ".join(x for x in re.split(r"\s*,\s*", q) if x) if "," in q else q
     cands = retrieve(s, q, kwq, mode, model, variant, limit=n, include_out_of_scope=include_out_of_scope)
     loaded = load_jobs(s, [j for j, _ in cands])
     items = [it for j, sc in cands if j in loaded
-             if (it := _item(loaded[j], sc, profile, True, filters)) is not None]
+             if (it := _item(loaded[j], sc, profile, True, filters, include_expired)) is not None]
     if profile:
         items.sort(key=lambda x: (-x.final_score, -x.retrieval_score, x.job_id))
     return {"query": q, "mode": mode, "results": items[:limit], "latency_ms": round((time.perf_counter() - t0) * 1000, 1)}

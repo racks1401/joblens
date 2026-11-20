@@ -18,6 +18,7 @@ log = logging.getLogger("joblens.pipeline")
 
 STEPS: list[tuple[str, str]] = [
     ("facts", "app.extract.facts:process_jobs"),
+    ("expire", "app.ingest.expire:process_jobs"),
     ("search", "app.search.index:process_jobs"),
     ("trust", "app.trust.score:process_jobs"),
 ]
@@ -51,7 +52,7 @@ def process_jobs(s: Session, job_ids: Sequence[int], steps: Sequence[str] | None
 
 
 def main() -> None:
-    """python -m app.pipeline [--steps facts,search,trust] [--all]
+    """python -m app.pipeline [--steps facts,expire,search,trust] [--all]
 
     Default: process active jobs missing facts. --all re-processes every active job (e.g. after
     adding an LLM key or changing the prompt version).
@@ -68,7 +69,7 @@ def main() -> None:
 
     setup_logging()
     ap = argparse.ArgumentParser()
-    ap.add_argument("--steps", default="facts,search,trust")
+    ap.add_argument("--steps", default="facts,expire,search,trust")
     ap.add_argument("--all", action="store_true", help="re-process every active job")
     ap.add_argument("--stale", action="store_true",
                     help="only jobs whose facts came from a different model or prompt version (resumable)")

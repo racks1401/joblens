@@ -179,6 +179,15 @@ def _pay(f: JobFacts) -> dict[str, Any] | None:
     return out
 
 
+def facts_block(f: JobFacts | None) -> dict[str, Any]:
+    """Stored facts every search result carries; null means the posting (as extracted) does not state it."""
+    if f is None:
+        return {"pay": None, "apply_deadline": None, "work_mode": None, "employment_type": None,
+                "facts": "not extracted for this job"}
+    return {"pay": _pay(f), "apply_deadline": f.apply_deadline.value, "work_mode": f.work_mode.value,
+            "employment_type": f.employment_type.value}
+
+
 def job_card(job: Job, f: JobFacts | None, t: TrustScore | None) -> dict[str, Any]:
     f = f or JobFacts(title=job.title)
     return {
@@ -188,7 +197,7 @@ def job_card(job: Job, f: JobFacts | None, t: TrustScore | None) -> dict[str, An
         "degrees": f.degrees_allowed.value, "branches": f.specializations.value, "batch": f.graduation_years.value,
         "min_cgpa": f.min_cgpa.value, "experience_min_years": f.experience_min_years.value,
         "required_skills": (f.required_skills.value or [])[:8], "apply_deadline": f.apply_deadline.value,
-        "ppo": f.ppo_or_conversion.value, "trust": trust_block(t, f),
+        "ppo": f.ppo_or_conversion.value, "expired": job.expired, "trust": trust_block(t, f),
         "flags": [job.title.lower()] if job.title in ("Title unknown", "Needs human title") else [],
     }
 
@@ -199,7 +208,7 @@ NAME_STOP = {"job", "jobs", "role", "roles", "intern", "internship", "internship
 
 
 def name_matches(s: Session, query: str, exclude: list[str], limit: int = 3) -> list[Job]:
-    """In-scope active jobs whose company or title contains a distinctive query word (e.g. 'TLDP', 'Elip').
+    """In-scope, active, unexpired jobs whose company or title contains a distinctive query word (e.g. 'TLDP', 'Elip').
 
     Hybrid search ANDs keyword terms, so a short name query like "JNJ TLDP" can miss the job it names."""
     from sqlalchemy import or_
@@ -208,7 +217,7 @@ def name_matches(s: Session, query: str, exclude: list[str], limit: int = 3) -> 
     if not words:
         return []
     conds = [c for w in words for c in (Job.company.ilike(f"%{w}%"), Job.title.op("~*")(rf"\m{re.escape(w)}\M"))]
-    q = select(Job).where(Job.is_active.is_(True), Job.in_scope.is_(True), or_(*conds)).order_by(Job.id).limit(limit * 3)
+    q = select(Job).where(Job.is_active.is_(True), Job.in_scope.is_(True), Job.expired.is_(False), or_(*conds)).order_by(Job.id).limit(limit * 3)
     rows = _drop_excluded(list(s.execute(q).scalars().all()), exclude)
     return rows[:limit]
 
@@ -227,8 +236,10 @@ def search_jobs(ctx: ToolContext, a: SearchJobsArgs) -> dict[str, Any]:
     rows = []
     for r in res["results"]:
         tb = trust_block(ctx.session.get(TrustScore, r.job_id), None)
+        fr = ctx.session.get(JobFactsRow, r.job_id)
         rows.append({"job_id": r.job_id, "title": r.title, "company": r.company or None,
                      "location": r.location_raw, "final_score": r.final_score,
+                     **facts_block(JobFacts.model_validate(fr.facts) if fr else None),
                      **(elig_block(r.eligibility) if r.eligibility else
                         {"eligibility": None, "needs_checking": None, "failed": None}),
                      "trust_level": tb["level"],
@@ -244,7 +255,7 @@ def search_jobs(ctx: ToolContext, a: SearchJobsArgs) -> dict[str, Any]:
         e = check_eligibility(ctx.profile, f or JobFacts(title=j.title))
         tb = trust_block(t, None)
         names.append({"job_id": j.id, "title": j.title, "company": j.company or None, "location": j.location_raw,
-                      **elig_block(e), "trust_level": tb["level"],
+                      **facts_block(f), **elig_block(e), "trust_level": tb["level"],
                       "scam_rules_fired": None if tb["scam_rules_fired"] is None else [x["code"] for x in tb["scam_rules_fired"]],
                       "ghost_signals": None if tb["ghost_signals"] is None else [x["code"] for x in tb["ghost_signals"]],
                       "url": j.url})
