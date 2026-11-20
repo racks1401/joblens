@@ -95,7 +95,7 @@ def main() -> None:
     ap.add_argument("--run", required=True, help="output folder under evals/results (new name per run)")
     ap.add_argument("--only", default="")
     args = ap.parse_args()
-    only = set(filter(None, args.only.split(",")))
+    only: set[str] = set(filter(None, args.only.split(",")))
     run_dir = RESULTS / args.run
     outdir = run_dir / "agent_transcripts"
     outdir.mkdir(parents=True, exist_ok=True)
@@ -103,7 +103,10 @@ def main() -> None:
     summary: list[dict[str, Any]] = []
     limit_hit = None
     with session_factory()() as s:
-        pid: uuid.UUID = s.execute(select(ProfileRow.id).order_by(ProfileRow.created_at)).scalars().first()
+        first = s.execute(select(ProfileRow.id).order_by(ProfileRow.created_at)).scalars().first()
+        if first is None:
+            raise SystemExit("no profile in the database: create one (POST /profiles) before running the conversations")
+        pid: uuid.UUID = first
         delete_memory(s, pid)
         for cid, msgs in CONVOS:
             if only and cid not in only:

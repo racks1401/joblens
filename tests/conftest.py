@@ -47,14 +47,18 @@ def _fresh_settings() -> Iterator[None]:
 
 @pytest.fixture(scope="session")
 def db_url() -> str:
-    """Migrated test database URL, or skip."""
+    """Migrated test database URL, or skip. With REQUIRE_TEST_DB=1 (set in CI) an unreachable database fails the
+    DB tests instead of skipping them, so a broken Postgres service cannot turn the run green."""
     try:
         eng = create_engine(TEST_DB)
         with eng.connect() as c:
             c.execute(text("SELECT 1"))
         eng.dispose()
-    except Exception:  # noqa: BLE001
-        pytest.skip(f"test database not reachable at {TEST_DB}")
+    except Exception as e:  # noqa: BLE001
+        msg = f"test database not reachable at {TEST_DB}: {type(e).__name__}"
+        if os.environ.get("REQUIRE_TEST_DB") == "1":
+            pytest.fail(msg + " (REQUIRE_TEST_DB=1)")
+        pytest.skip(msg)
     from alembic import command
     from alembic.config import Config
 
