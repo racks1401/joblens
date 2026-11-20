@@ -59,12 +59,20 @@ def explain_match(s: Session, profile_id: uuid.UUID, profile: Profile, job: Job,
         if tokens is not None:
             tokens["in"] += res.tokens_in
             tokens["out"] += res.tokens_out
-        expl = ground(MatchExplanation.model_validate(raw), profile, facts)
+        model_expl = MatchExplanation.model_validate(raw)
+        before_m, before_x = list(model_expl.matched_skills), list(model_expl.missing_skills)
+        expl = ground(model_expl, profile, facts)
     except BudgetExceeded as e:
         return {"error": str(e)}
     except (LLMJSONError, ValidationError) as e:
         return {"error": f"explanation unavailable ({type(e).__name__})"}
-    data = expl.model_dump() | {"eligibility": elig.verdict, "trust_level": trust.level if trust else None}
+    data = expl.model_dump() | {"eligibility": elig.verdict, "trust_level": trust.level if trust else None,
+                                "grounding": {
+                                    "matched_dropped": [x for x in before_m if x not in expl.matched_skills],
+                                    "missing_dropped": [x for x in before_x if x not in expl.missing_skills],
+                                    "rule": "skills kept only if they are in your profile and the job's skill "
+                                            "lists; eligibility and trust come from the rule engine, not the model",
+                                    "ok": before_m == expl.matched_skills and before_x == expl.missing_skills}}
     if prow is not None:
         stmt = insert(ExplanationRow).values(profile_id=profile_id, job_id=job.id, data=data | {"_key": key},
                                              model=llm.model, prompt_version=pv)

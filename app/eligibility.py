@@ -133,6 +133,20 @@ def rule_location(p: Profile, f: JobFacts) -> RuleResult:
     return _rr(rule="location", status="UNKNOWN", message=f"Job is {mode}; location not stated", evidence=ev)
 
 
+def pay_view(f: JobFacts) -> dict[str, object] | None:
+    """Pay as stored, in its own currency. INR adds inr_per_month; other currencies are never converted."""
+    m = f.pay.value
+    if m is None:
+        return None
+    out: dict[str, object] = {"min": m.min, "max": m.max, "currency": m.currency, "period": m.period}
+    if (m.currency or "INR").upper() == "INR":
+        inr = monthly_inr(m, f.duration_months.value)
+        out["inr_per_month"] = round(inr) if inr is not None else None
+    else:  # the role may not be open to India at this pay
+        out["note"] = f"pay is in {m.currency}, not converted to INR"
+    return out
+
+
 def monthly_inr(m: Money, duration_months: float | None = None) -> float | None:
     """Max pay converted to INR per month, or None if currency/period unknown."""
     amount = m.max if m.max is not None else m.min

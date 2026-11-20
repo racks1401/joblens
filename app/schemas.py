@@ -201,3 +201,5 @@ class JobOut(BaseModel):
     trust: TrustResult | None = None
     flags: list[str] = []  # e.g. "title unknown", "needs human title" (pasted jobs)
     related_job_ids: list[int] = []  # other roles split from the same pasted post
+    expired: bool = False  # apply deadline has passed (kept, hidden from default search)
+    eligibility: EligibilityResult | None = None  # only when GET /jobs/{id}?profile_id= is given

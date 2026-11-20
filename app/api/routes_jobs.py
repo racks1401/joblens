@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime
 from typing import Any
 
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import require_admin
 from app.api.errors import APIError
+from app.api.limits import enforce
 from app.db import get_session
 from app.ingest.paste import from_paste
 from app.ingest.store import upsert_job
@@ -32,10 +34,11 @@ def job_out(s: Session, job: Job, include_text: bool = True) -> JobOut:
         trust=TrustResult(score=trust.score, level=trust.level, reasons=trust.reasons, scam_prob=trust.scam_prob)  # type: ignore[arg-type]
         if trust else None,
         flags=[job.title.lower()] if job.title in ("Title unknown", "Needs human title") else [],
+        expired=job.expired,
     )
 
 
-@router.post("/jobs/paste", response_model=JobOut)
+@router.post("/jobs/paste", response_model=JobOut, dependencies=[Depends(enforce("paste", purpose="facts"))])
 def paste_job(body: PasteJobIn, s: Session = Depends(get_session)) -> JobOut:
     """Add a pasted job and run it through the same pipeline as ingested jobs."""
     from app.ingest.split import split_post
@@ -66,11 +69,22 @@ def paste_job(body: PasteJobIn, s: Session = Depends(get_session)) -> JobOut:
 
 
 @router.get("/jobs/{job_id}", response_model=JobOut)
-def get_job(job_id: int, s: Session = Depends(get_session)) -> JobOut:
+def get_job(job_id: int, profile_id: uuid.UUID | None = None, s: Session = Depends(get_session)) -> JobOut:
+    """A job with its stored facts and trust; with profile_id, also the eligibility check for that profile."""
     job = s.get(Job, job_id)
     if job is None:
         raise APIError(404, "job_not_found", f"No job with id {job_id}")
-    return job_out(s, job)
+    out = job_out(s, job)
+    if profile_id is not None:
+        from app.api.routes_profiles import load_profile
+        from app.eligibility import check_eligibility
+        from app.schemas import JobFacts
+
+        _, profile = load_profile(s, profile_id)
+        facts = s.get(JobFactsRow, job.id)
+        out.eligibility = check_eligibility(profile, JobFacts.model_validate(facts.facts) if facts
+                                            else JobFacts(title=job.title))
+    return out
 
 
 def _ingest_task() -> None:

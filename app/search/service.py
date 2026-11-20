@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.eligibility import check_eligibility, monthly_inr
+from app.eligibility import check_eligibility, monthly_inr, pay_view
 from app.models import Job, JobFactsRow, TrustScore
 from app.schemas import EligibilityResult, JobFacts, Profile, TrustResult
 from app.search.embed import get_embedder
@@ -56,6 +56,12 @@ class MatchItem(BaseModel):
     eligibility: EligibilityResult | None = None
     trust: TrustResult | None = None
     flagged: bool = False
+    # stored facts, shown as-is (null = the posting, as extracted, does not state it)
+    work_mode: str | None = None
+    employment_type: str | None = None
+    pay: dict[str, Any] | None = None
+    apply_deadline: str | None = None
+    expired: bool = False
 
 
 @dataclass
@@ -157,6 +163,9 @@ def _item(loaded: Loaded, retrieval: float, profile: Profile | None, show_inelig
         location_raw=loaded.job.location_raw, final_score=score, retrieval_score=round(retrieval, 4),
         skill_overlap=None if ov is None else round(ov, 4), matched_skills=sorted(set(pskills) & job_sk),
         eligibility=elig, trust=loaded.trust, flagged=level == "risky",
+        work_mode=f.work_mode.value, employment_type=f.employment_type.value, pay=pay_view(f),
+        apply_deadline=f.apply_deadline.value.isoformat() if f.apply_deadline.value else None,
+        expired=loaded.job.expired,
     )
 
 

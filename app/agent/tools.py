@@ -17,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.eligibility import check_eligibility, monthly_inr
+from app.eligibility import check_eligibility, pay_view
 from app.models import Job, JobFactsRow, TrustScore, UserMemory
 from app.schemas import JobFacts, Profile
 
@@ -167,16 +167,7 @@ def elig_block(e: Any) -> dict[str, Any]:
 
 
 def _pay(f: JobFacts) -> dict[str, Any] | None:
-    m = f.pay.value
-    if m is None:
-        return None
-    out: dict[str, Any] = {"min": m.min, "max": m.max, "currency": m.currency, "period": m.period}
-    if (m.currency or "INR").upper() == "INR":
-        inr = monthly_inr(m, f.duration_months.value)
-        out["inr_per_month"] = round(inr) if inr is not None else None
-    else:  # never shown as a rupee monthly figure: the role may not be open to India at this pay
-        out["note"] = f"pay is in {m.currency}, not converted to INR"
-    return out
+    return pay_view(f)
 
 
 def facts_block(f: JobFacts | None) -> dict[str, Any]:
