@@ -1,19 +1,14 @@
-"""JobLens UI entry point. P7 adds the pages (Profile, Matches, Search, Assistant, Add job, Eval results);
-for now this shows the API status line with the cold-start message (spec 17)."""
+"""JobLens UI: page navigation plus the API status line (with the cold-start wait for free hosting)."""
 
 from __future__ import annotations
 
-import os
 import time
 
 import httpx
 import streamlit as st
+from lib import API_URL
 
-API_URL = os.environ.get("API_URL", "http://localhost:8000")
-
-st.set_page_config(page_title="JobLens", page_icon="🔎", layout="wide")
-st.title("JobLens")
-st.caption("Fit + trust job matcher for freshers")
+st.set_page_config(page_title="JobLens", page_icon=":material/travel_explore:", layout="wide")
 
 
 @st.cache_data(ttl=15)
@@ -25,19 +20,32 @@ def health() -> dict | None:
         return None
 
 
-h = health()
-if h is None:
-    with st.status("API is waking up (free hosting sleeps when idle)...", expanded=True) as s:
-        for i in range(30):
-            time.sleep(2)
-            st.cache_data.clear()
-            h = health()
-            if h:
-                s.update(label=f"API is up after {2 * (i + 1)} s", state="complete")
-                break
-        else:
-            s.update(label="API did not respond. Try again in a minute.", state="error")
-if h:
-    db = "✅" if h["db"]["ok"] else "❌"
-    st.success(f"Server: {h['status']} · DB {db} (pgvector {h['db']['pgvector']}) · LLM: {h['llm']['provider']}")
-st.info("Pages (Profile, Matches, Search, Assistant, Add job, Eval results) are built in phase P7.")
+pages = [
+    st.Page("pages/matches.py", title="Matches", icon=":material/work:", default=True),
+    st.Page("pages/job.py", title="Job detail", icon=":material/description:"),
+    st.Page("pages/paste.py", title="Paste a job", icon=":material/content_paste:"),
+    st.Page("pages/profile.py", title="Profile", icon=":material/person:"),
+    st.Page("pages/chat.py", title="Chat", icon=":material/chat:"),
+    st.Page("pages/evals.py", title="Evals", icon=":material/analytics:"),
+]
+nav = st.navigation(pages)
+
+with st.sidebar:
+    st.markdown("### JobLens")
+    st.caption("Fit + trust job matcher for students and freshers in India.")
+    h = health()
+    if h is None:
+        with st.status("API is waking up (free hosting sleeps when idle)...", expanded=True) as s:
+            for i in range(30):
+                time.sleep(2)
+                st.cache_data.clear()
+                h = health()
+                if h:
+                    s.update(label=f"API is up after {2 * (i + 1)} s", state="complete")
+                    break
+            else:
+                s.update(label="API did not respond. Try again in a minute.", state="error")
+    if h:
+        st.caption(f"API {h['status']} · database {'ok' if h['db']['ok'] else 'down'} · LLM {h['llm']['provider']}")
+
+nav.run()

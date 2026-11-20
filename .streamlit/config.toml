@@ -1,0 +1,8 @@
+[server]
+maxUploadSize = 5  # MB; the API also refuses larger PDFs
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
