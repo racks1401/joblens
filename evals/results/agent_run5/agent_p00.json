@@ -1,0 +1,190 @@
+{
+ "conversations": [
+  {
+   "id": "c05",
+   "ran": true,
+   "messages": [
+    "any remote data science or machine learning roles for a 2027 graduate?"
+   ],
+   "grounded": true,
+   "grounded_tools_only": true,
+   "complete": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [
+       1031,
+       1160,
+       1091,
+       1159,
+       987
+      ],
+      "numbers_checked": [
+       "USD\u202f230,000",
+       "450,000",
+       "USD\u202f230,000",
+       "450,000",
+       "65,000",
+       "100,000"
+      ],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": [],
+      "verdict_missing": [],
+      "verdict_mismatch": [],
+      "rules_not_in_job_output": [],
+      "rules_for_unchecked_job": [],
+      "wrong_job_counts": [],
+      "unsupported_not_stated": [],
+      "accepted_from_profile": [],
+      "accepted_from_user_message": [],
+      "ok_tools_only": true
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs"
+     ],
+     "tokens": {
+      "in": 4096,
+      "out": 700,
+      "total": 4796
+     }
+    }
+   ]
+  },
+  {
+   "id": "c09",
+   "ran": true,
+   "messages": [
+    "full-time roles paying at least 50000 a month"
+   ],
+   "grounded": true,
+   "grounded_tools_only": false,
+   "complete": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [],
+      "numbers_checked": [
+       "\u20b950,000"
+      ],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": [],
+      "verdict_missing": [],
+      "verdict_mismatch": [],
+      "rules_not_in_job_output": [],
+      "rules_for_unchecked_job": [],
+      "wrong_job_counts": [],
+      "unsupported_not_stated": [],
+      "accepted_from_profile": [],
+      "accepted_from_user_message": [
+       "\u20b950,000"
+      ],
+      "ok_tools_only": false
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs",
+      "search_jobs"
+     ],
+     "tokens": {
+      "in": 3243,
+      "out": 122,
+      "total": 3365
+     }
+    }
+   ]
+  },
+  {
+   "id": "c11",
+   "ran": true,
+   "messages": [
+    "does Elip charge any fee"
+   ],
+   "grounded": true,
+   "grounded_tools_only": true,
+   "complete": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [
+       1295
+      ],
+      "numbers_checked": [],
+      "skipped_small_numbers": 0,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": [],
+      "verdict_missing": [],
+      "verdict_mismatch": [],
+      "rules_not_in_job_output": [],
+      "rules_for_unchecked_job": [],
+      "wrong_job_counts": [],
+      "unsupported_not_stated": [],
+      "accepted_from_profile": [],
+      "accepted_from_user_message": [],
+      "ok_tools_only": true
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs"
+     ],
+     "tokens": {
+      "in": 3651,
+      "out": 154,
+      "total": 3805
+     }
+    }
+   ]
+  },
+  {
+   "id": "c13",
+   "ran": true,
+   "messages": [
+    "which job pays the most"
+   ],
+   "grounded": true,
+   "grounded_tools_only": true,
+   "complete": true,
+   "turns": [
+    {
+     "grounding": {
+      "ok": true,
+      "job_ids_checked": [],
+      "numbers_checked": [],
+      "skipped_small_numbers": 1,
+      "unsupported_job_ids": [],
+      "unsupported_numbers": [],
+      "jobs_named_without_id": [],
+      "verdict_missing": [],
+      "verdict_mismatch": [],
+      "rules_not_in_job_output": [],
+      "rules_for_unchecked_job": [],
+      "wrong_job_counts": [],
+      "unsupported_not_stated": [],
+      "accepted_from_profile": [],
+      "accepted_from_user_message": [],
+      "ok_tools_only": true
+     },
+     "stop": null,
+     "tools": [
+      "search_jobs"
+     ],
+     "tokens": {
+      "in": 3660,
+      "out": 138,
+      "total": 3798
+     }
+    }
+   ]
+  }
+ ],
+ "total_tokens": 15764,
+ "limit_hit": null
+}

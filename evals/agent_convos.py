@@ -66,7 +66,8 @@ def flags(g: dict[str, Any]) -> list[str]:
             + [f"rules {x['job_id']}: {', '.join(x['rules'])} not in its lists {x['tool']}"
                for x in g.get("rules_not_in_job_output", [])]
             + [f"rules for unchecked {x['job_id']}: {', '.join(x['rules'])}" for x in g.get("rules_for_unchecked_job", [])]
-            + [f"count {x['stated']} not in {x['tool_counts']}" for x in g.get("wrong_job_counts", [])])
+            + [f"count {x['stated']} not in {x['tool_counts']}" for x in g.get("wrong_job_counts", [])]
+            + [f"'not listed' {x['job_id']} {x['field']}: {x['why']}" for x in g.get("unsupported_not_stated", [])])
 
 
 def md(cid: str, turns: list[dict[str, Any]]) -> str:

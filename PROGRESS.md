@@ -655,21 +655,44 @@ proposal: add it as an anonymized `p00` (no name) before drafting.
    job counts and unrequested searches after "remember" are all gone. What remains is listed under Known limitations.
    Found in passing: TLDP 1303's apply_deadline (2026-11-19) has passed, but it is still active and returned.
 
+## Session 16 (2026-11-20) — job facts in search, expired jobs, run 5
+
+1. **search_jobs facts**: every result (and name match) carries pay (own currency; INR adds inr_per_month), apply_deadline,
+   work_mode and employment_type from the stored facts. Prompt `agent_v4`: use these fields; "not listed" only
+   when the field is null; no generalizing over listed jobs unless every job's field shows it; always use a tool.
+   Grounding: `unsupported_not_stated` flags "pay / deadline not listed" for a job whose field is not null or was
+   never in the turn's outputs (lines without a job id count for every job in the answer); the rule-name scan
+   stops at the end of its clause. Offline re-score: c13 (runs 3 and 4) and c09 (run 4) flagged, nothing else.
+2. **Expired jobs** (`app/ingest/expire.py`, migration 0006 `jobs.expired`, pipeline step "expire" after facts):
+   deadline before today (IST) → expired; a deadline today is still open; a later deadline clears it. Excluded
+   from the default /matches, /search and agent search (`include_expired=true` shows them); get_job returns
+   `"expired": true`. Dry run then applied: 9 jobs, all JNJ with deadline 2026-11-19 — 4 active (#1302 JJT
+   Internship, #1303 TLDP, #1304 Product Engineer, #1305 Needs human title) and 5 already inactive (#1297–#1301).
+   Wikimedia #730 (deadline today, out of scope) is not expired. Searchable in scope 109 → **105**. 340 tests pass.
+3. **Run 5** (`evals/results/agent_run5/`, only c05, c09, c11, c13; others keep run 4): grounding 4/4 (tools-only
+   3/4), 15,764 tokens. Manual (Claude's reading): c05 correct, c11 correct, c09 minor, c13 wrong.
+
 ## Known limitations
 
-As of run 4 (2026-11-20). Plain list for the README when one is written.
+As of run 5 (2026-11-20). Plain list for the README when one is written.
 
-- **Agent mistakes left after run 4** (15 test conversations, one profile; see `agent_run4/manual_review.md`):
-  - It says "no pay listed" or "none list a salary" for jobs whose details it never fetched. Search results have no
-    pay field, so it is guessing (c09 was false: the job pays ₹15.65 LPA; c13 was right only by luck).
-  - Closing summary lines can overgeneralize: "all are internships", "all are remote", "your skills are compatible".
-    The grounding check reads job ids, numbers, verdicts and rule names, not free sentences, so it misses these.
-  - Sometimes too terse (drops the rule list it fetched) or calls no tool and gives no answer (c11).
-  - "My matches", "which pays the most" and similar questions become one 5-result search; there is no sort-by-pay
-    tool, so "highest-paying job" cannot be answered across the database.
+- **Agent mistakes left** (15 test conversations on one profile; run 4 for 11 of them, run 5 for c05, c09, c11, c13;
+  see `agent_run4/manual_review.md` and `agent_run5/manual_review.md`):
+  - Whole-database conclusions from one 5-result search: "which job pays the most" gets "no information" (c13)
+    although 9 searchable jobs list pay. There is no sort-by-pay tool, and the agent often invents a narrow query
+    ("software engineer intern"). "My matches" is read the same way (c07).
+  - Most board jobs have no extracted employment_type, so a "full-time" filter drops them without saying so (c09:
+    "no full-time roles ≥ ₹50,000/month" while 7 jobs of unstated type pay more).
+  - Closing summary lines can overgeneralize: "all are internships" (c01), "your skills are compatible" (c08, from
+    empty skill lists). The grounding check reads job ids, numbers, dates, verdicts, rule names and "not listed"
+    claims, not free sentences, so it misses these. (c05's "all remote" is now backed by each job's work_mode.)
+  - Sometimes too terse: c02 drops the needs_checking list it fetched. Name matches can be left out without a word
+    (c05).
   - The match explanation (explain_v1) can call a CHECK job "meets all the conditions" with no matched skills.
   - Tested on one profile (p00) and 15 conversations with one model (Groq gpt-oss-120b); the Groq free tier
     (about 200K tokens/day) limits how much can be run.
+- **Region in a title**: the India rule reads locations and time-zone wording, not titles, so "Analytics Engineering
+  Advocate - Europe" (Lightdash) stays in scope.
 - **Multi-role posts**: a post with several roles is split by an LLM that returns line ranges only; each piece gets
   the original header and footer copied in, so shared text (CGPA, branches, deadline) repeats in every role, and
   role-specific lines in the shared parts are not separated. A role without its own heading gets the title "Needs
@@ -681,6 +704,7 @@ As of run 4 (2026-11-20). Plain list for the README when one is written.
 - **Trust classifier**: trained on Kaggle EMSCAD (2012–2014, 17,880 postings, 60% US, 13% GB, 1.5% India). Its
   test scores (F1 0.882) are on that data only; it is **not validated on Indian postings** or on today's ATS job
   boards. Only the rule checks can mark a job as having scam signals; the classifier only lowers the score.
-- **Expired jobs**: a job whose apply_deadline has passed stays active and can be returned (TLDP 1303).
+- **Deadlines**: only 10 jobs have an extracted apply_deadline, so expiry covers only those; the expire step runs
+  in the pipeline and on demand (`python -m app.ingest.expire --apply`), not on a daily schedule.
 
 ## Not started: P7.
