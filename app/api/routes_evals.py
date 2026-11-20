@@ -71,7 +71,7 @@ def evals_summary() -> dict[str, Any]:
                      "not_run": [c["id"] for c in s["conversations"] if not c.get("ran")],
                      "total_tokens": s.get("total_tokens"),
                      "manual_review": m.group(1).strip() if m else None,
-                     "manual_reviewer": "Claude (the builder's own review is pending)" if m else None})
+                     "manual_review_file": f"evals/results/{d.name}/manual_review.md" if m else None})
     return {"retrieval_e1": e1, "trust_classifier": _read("trust_classifier.json"),
             "label_agreement": _read("retrieval_agreement.json"), "agent_runs": runs,
             "agent_caveat": "One eval profile (p00), 15 fixed conversations, one model "

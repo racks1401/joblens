@@ -66,8 +66,9 @@ rows = [{"Run": r["run"].replace("agent_", ""), "Conversations (n)": r["conversa
          "Manual review": r["manual_review"] or "no review file", "Tokens": r["total_tokens"]}
         for r in s["agent_runs"]]
 st.dataframe(rows, hide_index=True, use_container_width=True)
-st.caption("Manual review: answers read against the raw tool outputs by Claude; the builder's own reading is "
-           "pending. Run 5 re-ran only the 4 conversations judged wrong or not answered in run 4.")
+st.caption("The agent's answers were checked against raw tool outputs in a manual review (files in "
+           "evals/results/agent_run*/manual_review.md), and the mistakes that remain are listed in Known "
+           "limitations. Run 5 re-ran only the 4 conversations judged wrong or not answered in run 4.")
 
 # --- label agreement
 st.subheader("Label agreement: LLM drafts vs human review")
@@ -77,5 +78,5 @@ if a:
              "Exact agreement": f"{v['agreement']:.1%}", "Within one grade": f"{v['within_one']}/{v['n']}"}
             for g, v in a["groups"].items()]
     st.dataframe(rows, hide_index=True, use_container_width=True)
-    st.caption("One human reviewer; 0-2 relevance grades. High agreement on 49 pairs does not make the 85 unreviewed "
+    st.caption("The builder reviewed the 49 labels (one reviewer); 0-2 relevance grades. High agreement on 49 pairs does not make the 85 unreviewed "
                "drafts reliable.")
