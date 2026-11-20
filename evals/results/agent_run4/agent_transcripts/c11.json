@@ -1,0 +1,47 @@
+{
+ "id": "c11",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "does Elip charge any fee",
+   "result": {
+    "session_id": "9491cf59-423d-43ff-bc28-fd88fadc6200",
+    "answer": "I’m sorry—I don’t have any information about fees or charges from Elip in the job data I can access.",
+    "tool_trace": [],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [],
+     "numbers_checked": [],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "verdict_missing": [],
+     "verdict_mismatch": [],
+     "rules_not_in_job_output": [],
+     "rules_for_unchecked_job": [],
+     "wrong_job_counts": [],
+     "accepted_from_profile": [],
+     "accepted_from_user_message": [],
+     "ok_tools_only": true
+    },
+    "tokens": {
+     "in": 1327,
+     "out": 78,
+     "total": 1405
+    },
+    "llm_calls": 1,
+    "explanations_skipped": [],
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 1.6
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Bengaluru"
+  ]
+ }
+}

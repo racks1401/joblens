@@ -1,0 +1,187 @@
+{
+ "id": "c12",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "am I definitely eligible for the Stripe role",
+   "result": {
+    "session_id": "8f12d873-aa1b-4c8c-bfd6-8c737eece844",
+    "answer": "**Stripe – Software Engineer, Intern (job_id: 1108)** – INELIGIBLE – https://stripe.com/jobs/search?gh_jid=8031833  \n**Stripe – Software Engineer, New Grad (job_id: 1270)** – INELIGIBLE – https://stripe.com/jobs/search?gh_jid=8130876  \n**Stripe – Finance and Strategy Data Analyst (job_id: 205)** – CHECK – https://stripe.com/jobs/search?gh_jid=8364868  \n\nYou are **not definitely eligible** for any of the Stripe roles listed; two are marked INELIGIBLE and one requires further checking.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "Stripe",
+       "filters": {
+        "employment_type": null,
+        "work_mode": null,
+        "location": null,
+        "min_monthly_pay_inr": null,
+        "fresher_only": false,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 78.6,
+      "result_chars": 1975,
+      "error": null,
+      "output": {
+       "jobs_returned": 5,
+       "results": [
+        {
+         "job_id": 1108,
+         "title": "Software Engineer, Intern",
+         "company": "Stripe",
+         "location": "Bengaluru / IN-Bengaluru",
+         "final_score": 78,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "specialization",
+          "graduation_year",
+          "cgpa"
+         ],
+         "failed": [
+          "degree"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [
+          "age_120"
+         ],
+         "url": "https://stripe.com/jobs/search?gh_jid=8031833"
+        },
+        {
+         "job_id": 1270,
+         "title": "Software Engineer, New Grad",
+         "company": "Stripe",
+         "location": "Bangalore / IN-Bengaluru",
+         "final_score": 74,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "specialization",
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [
+          "degree"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://stripe.com/jobs/search?gh_jid=8130876"
+        },
+        {
+         "job_id": 205,
+         "title": "Finance and Strategy Data Analyst",
+         "company": "Stripe",
+         "location": "Bengaluru / India Locations",
+         "final_score": 60,
+         "eligibility": "CHECK",
+         "needs_checking": [
+          "degree",
+          "specialization",
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://stripe.com/jobs/search?gh_jid=8364868"
+        },
+        {
+         "job_id": 1280,
+         "title": "Applied AI Research Engineer",
+         "company": "Enterpret",
+         "location": "Bengaluru / Bangalore",
+         "final_score": 56,
+         "eligibility": "CHECK",
+         "needs_checking": [
+          "degree",
+          "specialization",
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [
+          "age_120"
+         ],
+         "url": "https://job-boards.greenhouse.io/enterpret/jobs/7580532003"
+        },
+        {
+         "job_id": 660,
+         "title": "Associate Product Manager",
+         "company": "SpotDraft",
+         "location": "SpotDraft HQ, Bengaluru",
+         "final_score": 54,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "degree",
+          "specialization",
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [
+          "experience"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [
+          "age_60"
+         ],
+         "url": "https://jobs.ashbyhq.com/spotdraft/e9146208-bd24-443b-b1d8-96aabd292538"
+        }
+       ],
+       "name_matches": null,
+       "excluded_companies": null
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [
+      1108,
+      1270,
+      205
+     ],
+     "numbers_checked": [],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "verdict_missing": [],
+     "verdict_mismatch": [],
+     "rules_not_in_job_output": [],
+     "rules_for_unchecked_job": [],
+     "wrong_job_counts": [],
+     "accepted_from_profile": [],
+     "accepted_from_user_message": [],
+     "ok_tools_only": true
+    },
+    "tokens": {
+     "in": 3225,
+     "out": 225,
+     "total": 3450
+    },
+    "llm_calls": 2,
+    "explanations_skipped": [],
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 57.1
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Bengaluru"
+  ]
+ }
+}

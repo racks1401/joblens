@@ -1,0 +1,254 @@
+{
+ "id": "c02",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "am I eligible for JNJ TLDP",
+   "result": {
+    "session_id": "45f5a3d4-194c-43e3-a79e-e0b1c631920c",
+    "answer": "TLDP (Technology Leadership Development Program), Johnson & Johnson (job_id: 1303) CHECK",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "JNJ TLDP",
+       "filters": {
+        "employment_type": null,
+        "work_mode": null,
+        "location": null,
+        "min_monthly_pay_inr": null,
+        "fresher_only": false,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 70.0,
+      "result_chars": 2098,
+      "error": null,
+      "output": {
+       "jobs_returned": 6,
+       "results": [
+        {
+         "job_id": 1302,
+         "title": "JJT Internship",
+         "company": "Johnson & Johnson",
+         "location": null,
+         "final_score": 93,
+         "eligibility": "CHECK",
+         "needs_checking": [
+          "graduation_year",
+          "location"
+         ],
+         "failed": [],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": null
+        },
+        {
+         "job_id": 1304,
+         "title": "Product Engineer",
+         "company": "Johnson & Johnson",
+         "location": null,
+         "final_score": 90,
+         "eligibility": "CHECK",
+         "needs_checking": [
+          "graduation_year",
+          "location",
+          "employment_type"
+         ],
+         "failed": [],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": null
+        },
+        {
+         "job_id": 660,
+         "title": "Associate Product Manager",
+         "company": "SpotDraft",
+         "location": "SpotDraft HQ, Bengaluru",
+         "final_score": 78,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "degree",
+          "specialization",
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [
+          "experience"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [
+          "age_60"
+         ],
+         "url": "https://jobs.ashbyhq.com/spotdraft/e9146208-bd24-443b-b1d8-96aabd292538"
+        },
+        {
+         "job_id": 1280,
+         "title": "Applied AI Research Engineer",
+         "company": "Enterpret",
+         "location": "Bengaluru / Bangalore",
+         "final_score": 71,
+         "eligibility": "CHECK",
+         "needs_checking": [
+          "degree",
+          "specialization",
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [
+          "age_120"
+         ],
+         "url": "https://job-boards.greenhouse.io/enterpret/jobs/7580532003"
+        },
+        {
+         "job_id": 579,
+         "title": "Systems Engineer II - R&D Business Systems",
+         "company": "Fivetran",
+         "location": "Bengaluru, Karnataka, India, APAC / IND - Bengaluru",
+         "final_score": 68,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "degree",
+          "specialization",
+          "graduation_year",
+          "cgpa"
+         ],
+         "failed": [
+          "experience"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://www.fivetran.com/careers/job?gh_jid=8201478003"
+        }
+       ],
+       "name_matches": [
+        {
+         "job_id": 1303,
+         "title": "TLDP (Technology Leadership Development Program)",
+         "company": "Johnson & Johnson",
+         "location": null,
+         "eligibility": "CHECK",
+         "needs_checking": [
+          "graduation_year",
+          "location"
+         ],
+         "failed": [],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": null
+        }
+       ],
+       "excluded_companies": null
+      }
+     },
+     {
+      "step": 1,
+      "tool": "check_eligibility",
+      "args": {
+       "job_id": 1303
+      },
+      "ms": 5.1,
+      "result_chars": 991,
+      "error": null,
+      "output": {
+       "job_id": 1303,
+       "title": "TLDP (Technology Leadership Development Program)",
+       "company": "Johnson & Johnson",
+       "verdict": "CHECK",
+       "needs_checking": [
+        "graduation_year",
+        "location"
+       ],
+       "failed": [],
+       "rules": [
+        {
+         "rule": "degree",
+         "status": "PASS",
+         "message": "Job allows BACHELORS, MASTERS, MCA, MTECH; you have MCA"
+        },
+        {
+         "rule": "specialization",
+         "status": "PASS",
+         "message": "Job allows computer science, electronics, electrical engineering, mathematics and computing; you have AI & IoT"
+        },
+        {
+         "rule": "graduation_year",
+         "status": "UNKNOWN",
+         "message": "Job does not state batch years"
+        },
+        {
+         "rule": "cgpa",
+         "status": "PASS",
+         "message": "Job asks for 7.5 CGPA; you have 7.96"
+        },
+        {
+         "rule": "experience",
+         "status": "PASS",
+         "message": "Job gives no minimum experience"
+        },
+        {
+         "rule": "location",
+         "status": "SOFT_FAIL",
+         "message": "Job is in Hyderabad; you prefer Bengaluru, Gurugram"
+        },
+        {
+         "rule": "pay",
+         "status": "PASS",
+         "message": "You have no minimum pay set"
+        },
+        {
+         "rule": "employment_type",
+         "status": "PASS",
+         "message": "Job is full time; you want internship, full time"
+        }
+       ]
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [
+      1303
+     ],
+     "numbers_checked": [],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "verdict_missing": [],
+     "verdict_mismatch": [],
+     "rules_not_in_job_output": [],
+     "rules_for_unchecked_job": [],
+     "wrong_job_counts": [],
+     "accepted_from_profile": [],
+     "accepted_from_user_message": [],
+     "ok_tools_only": true
+    },
+    "tokens": {
+     "in": 5433,
+     "out": 256,
+     "total": 5689
+    },
+    "llm_calls": 3,
+    "explanations_skipped": [],
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 60.7
+  }
+ ],
+ "memory_after": {}
+}

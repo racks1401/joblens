@@ -637,4 +637,50 @@ proposal: add it as an anonymized `p00` (no name) before drafting.
    (no check_eligibility call, wrong job count). Proposed, not applied: search_jobs returns needs_checking/failed per
    result, and the grounding check compares rule names per job id.
 
+## Session 15 (2026-11-20) — per-job rule lists, run 4
+
+1. **Per-job rule lists** (commit 4d64bc9): every search_jobs result (and name match) carries its own
+   `needs_checking` / `failed`. Grounding also flags rule names stated for a job that are not in that job's lists
+   (`rules_not_in_job_output`), rules given for a job whose rules were never fetched (`rules_for_unchecked_job`),
+   and "checked N jobs" counts that match no tool count (`wrong_job_counts`). New prompt `agent_v3` (never copy
+   rules between jobs; "not checked" for unfetched facts; name ghost signals; count same-company/title duplicates;
+   remember turns do nothing else). Re-scoring run 3 offline flags c01, c02, c04, c05 (c13 still missed).
+2. **Run 4** (`evals/results/agent_run4/`; runs 1-3 kept): 15 conversations, 17 turns, both c15 turns ran,
+   68,835 tokens, no budget or Groq limit hit. Grounding check **14/15** (tools-only 12/15; c01 and c08 only repeat
+   the real profile CGPA and batch year). Report fix: the Flags column did not show the three new grounding fields;
+   `flags()` now does, and the .md files were rebuilt from the saved .json (nothing re-run).
+   **Manual review** (`agent_run4/manual_review.md`, Claude's reading; Ravi's pending): **7 correct** (c03, c04, c06,
+   c07, c10, c12, c14), **3 minor** (c01, c02, c15), **1 not answered** (c11: no tool call), **4 wrong** (c05, c08,
+   c09, c13). Run 3 was 6 / 3 / 5 wrong / 1 incomplete. Copied rule lists, "no red flags" with ghost signals, wrong
+   job counts and unrequested searches after "remember" are all gone. What remains is listed under Known limitations.
+   Found in passing: TLDP 1303's apply_deadline (2026-11-19) has passed, but it is still active and returned.
+
+## Known limitations
+
+As of run 4 (2026-11-20). Plain list for the README when one is written.
+
+- **Agent mistakes left after run 4** (15 test conversations, one profile; see `agent_run4/manual_review.md`):
+  - It says "no pay listed" or "none list a salary" for jobs whose details it never fetched. Search results have no
+    pay field, so it is guessing (c09 was false: the job pays ₹15.65 LPA; c13 was right only by luck).
+  - Closing summary lines can overgeneralize: "all are internships", "all are remote", "your skills are compatible".
+    The grounding check reads job ids, numbers, verdicts and rule names, not free sentences, so it misses these.
+  - Sometimes too terse (drops the rule list it fetched) or calls no tool and gives no answer (c11).
+  - "My matches", "which pays the most" and similar questions become one 5-result search; there is no sort-by-pay
+    tool, so "highest-paying job" cannot be answered across the database.
+  - The match explanation (explain_v1) can call a CHECK job "meets all the conditions" with no matched skills.
+  - Tested on one profile (p00) and 15 conversations with one model (Groq gpt-oss-120b); the Groq free tier
+    (about 200K tokens/day) limits how much can be run.
+- **Multi-role posts**: a post with several roles is split by an LLM that returns line ranges only; each piece gets
+  the original header and footer copied in, so shared text (CGPA, branches, deadline) repeats in every role, and
+  role-specific lines in the shared parts are not separated. A role without its own heading gets the title "Needs
+  human title" and is not guessed. Tested on one real post (JNJ, 4 roles).
+- **Pasted-job work mode holds one value**: "on-site or remote" (Elip) is stored as remote only; the schema cannot
+  hold both.
+- **Retrieval labels are small and partly LLM-drafted**: 49 human-reviewed pairs (p00 24 + sample 25). The larger
+  set of 134 pairs includes 85 qwen LLM drafts that no one hand-labeled. E1 numbers on either set are rough.
+- **Trust classifier**: trained on Kaggle EMSCAD (2012–2014, 17,880 postings, 60% US, 13% GB, 1.5% India). Its
+  test scores (F1 0.882) are on that data only; it is **not validated on Indian postings** or on today's ATS job
+  boards. Only the rule checks can mark a job as having scam signals; the classifier only lowers the score.
+- **Expired jobs**: a job whose apply_deadline has passed stays active and can be returned (TLDP 1303).
+
 ## Not started: P7.

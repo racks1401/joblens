@@ -1,0 +1,188 @@
+{
+ "id": "c01",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "best internships for me in Bengaluru",
+   "result": {
+    "session_id": "a340c97e-1458-45bc-95f4-9c76a7c139b5",
+    "answer": "**Internship opportunities in Bengaluru (5 jobs checked)**  \n\n1. **Associate Software Development Engineer (SDE) Intern, Hevo Data (job_id: 350) – INELIGIBLE**  \n   - Failed requirement: **degree**  \n   - Needs checking: graduation_year, cgpa  \n   - Trust: **no scam signals**  \n   - Link: https://jobs.lever.co/hevodata/993a3ed3-3014-432f-b0f4-28d300d58d9a  \n\n2. **SDE I, Hevo Data (job_id: 360) – INELIGIBLE**  \n   - Failed requirement: **degree**  \n   - Needs checking: graduation_year, cgpa, employment_type  \n   - Trust: **no scam signals** (ghost signal: **age_60** – posted ≥ 60 days ago)  \n   - Link: https://jobs.lever.co/hevodata/6cbbe304-e065-4711-bf3e-756795d2bc2a  \n\n3. **Frontend Engineer, Razorpay (job_id: 1149) – INELIGIBLE**  \n   - Failed requirement: **experience**  \n   - Needs checking: degree, specialization, graduation_year, cgpa, employment_type  \n   - Trust: **no scam signals**  \n   - Link: https://job-boards.greenhouse.io/razorpaysoftwareprivatelimited/jobs/4731054005  \n\n4. **Associate SDE, Hevo Data (job_id: 341) – INELIGIBLE**  \n   - Failed requirement: **degree**  \n   - Needs checking: graduation_year, cgpa, employment_type  \n   - Trust: **no scam signals**  \n   - Link: https://jobs.lever.co/hevodata/4eccaf98-ba19-42ea-b040-e0976d4dadfe  \n\n5. **APM - Bonds, Stable Money (job_id: 1281) – INELIGIBLE**  \n   - Failed requirements: **degree, experience**  \n   - Needs checking: specialization, graduation_year, cgpa, employment_type  \n   - Trust: **no scam signals**  \n   - Link: https://jobs.lever.co/stable-money1/24248caf-2820-4e76-9905-a71ae17cf726  \n\n*All listed postings are internships or early‑career roles in Bengaluru, but based on the candidate profile (MCA in AI & IoT, graduating 2027, CGPA 7.96, no prior experience) each job is currently **INELIGIBLE** due to the stated missing degree or experience requirements.*",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "internship Bengaluru",
+       "filters": {
+        "employment_type": null,
+        "work_mode": null,
+        "location": "Bengaluru",
+        "min_monthly_pay_inr": null,
+        "fresher_only": true,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 2463.8,
+      "result_chars": 1943,
+      "error": null,
+      "output": {
+       "jobs_returned": 5,
+       "results": [
+        {
+         "job_id": 350,
+         "title": "Associate Software Development Engineer (SDE) Intern",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "final_score": 65,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "graduation_year",
+          "cgpa"
+         ],
+         "failed": [
+          "degree"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://jobs.lever.co/hevodata/993a3ed3-3014-432f-b0f4-28d300d58d9a"
+        },
+        {
+         "job_id": 360,
+         "title": "SDE I",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "final_score": 45,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [
+          "degree"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [
+          "age_60"
+         ],
+         "url": "https://jobs.lever.co/hevodata/6cbbe304-e065-4711-bf3e-756795d2bc2a"
+        },
+        {
+         "job_id": 1149,
+         "title": "Frontend Engineer",
+         "company": "Razorpay",
+         "location": "Bengaluru / Payments",
+         "final_score": 42,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "degree",
+          "specialization",
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [
+          "experience"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://job-boards.greenhouse.io/razorpaysoftwareprivatelimited/jobs/4731054005"
+        },
+        {
+         "job_id": 341,
+         "title": "Associate SDE",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "final_score": 39,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [
+          "degree"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://jobs.lever.co/hevodata/4eccaf98-ba19-42ea-b040-e0976d4dadfe"
+        },
+        {
+         "job_id": 1281,
+         "title": "APM - Bonds",
+         "company": "Stable Money",
+         "location": "Bengaluru",
+         "final_score": 33,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "specialization",
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [
+          "degree",
+          "experience"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://jobs.lever.co/stable-money1/24248caf-2820-4e76-9905-a71ae17cf726"
+        }
+       ],
+       "name_matches": null,
+       "excluded_companies": null
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [
+      350,
+      360,
+      1149,
+      341,
+      1281
+     ],
+     "numbers_checked": [
+      "60",
+      "2027",
+      "7.96"
+     ],
+     "skipped_small_numbers": 1,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "verdict_missing": [],
+     "verdict_mismatch": [],
+     "rules_not_in_job_output": [],
+     "rules_for_unchecked_job": [],
+     "wrong_job_counts": [],
+     "accepted_from_profile": [
+      "2027",
+      "7.96"
+     ],
+     "accepted_from_user_message": [],
+     "ok_tools_only": false
+    },
+    "tokens": {
+     "in": 3275,
+     "out": 724,
+     "total": 3999
+    },
+    "llm_calls": 2,
+    "explanations_skipped": [],
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 5.4
+  }
+ ],
+ "memory_after": {}
+}

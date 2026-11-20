@@ -1,0 +1,122 @@
+{
+ "id": "c09",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "full-time roles paying at least 50000 a month",
+   "result": {
+    "session_id": "58bc8c0b-716e-4389-995f-fe18eb49e133",
+    "answer": "TLDP (Technology Leadership Development Program), Johnson & Johnson (job_id: 1303) — CHECK [needs checking: graduation_year, location] — no scam signals. No pay or deadline listed.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "",
+       "filters": {
+        "min_monthly_pay_inr": 50000,
+        "employment_type": "Full-time"
+       },
+       "limit": 5
+      },
+      "ms": 0.0,
+      "result_chars": 0,
+      "error": "provider rejected arguments",
+      "output": {
+       "error": "[`/query`: minLength: got 0, want 1]"
+      }
+     },
+     {
+      "step": 1,
+      "tool": "search_jobs",
+      "args": {
+       "query": "software engineer",
+       "filters": {
+        "employment_type": "full_time",
+        "work_mode": null,
+        "location": null,
+        "min_monthly_pay_inr": 50000,
+        "fresher_only": false,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 46.9,
+      "result_chars": 368,
+      "error": null,
+      "output": {
+       "jobs_returned": 1,
+       "results": [
+        {
+         "job_id": 1303,
+         "title": "TLDP (Technology Leadership Development Program)",
+         "company": "Johnson & Johnson",
+         "location": null,
+         "final_score": 10,
+         "eligibility": "CHECK",
+         "needs_checking": [
+          "graduation_year",
+          "location"
+         ],
+         "failed": [],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": null
+        }
+       ],
+       "name_matches": null,
+       "excluded_companies": null
+      }
+     }
+    ],
+    "grounding": {
+     "ok": false,
+     "job_ids_checked": [
+      1303
+     ],
+     "numbers_checked": [],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "verdict_missing": [],
+     "verdict_mismatch": [],
+     "rules_not_in_job_output": [
+      {
+       "job_id": 1303,
+       "rules": [
+        "pay"
+       ],
+       "tool": [
+        "graduation_year",
+        "location"
+       ]
+      }
+     ],
+     "rules_for_unchecked_job": [],
+     "wrong_job_counts": [],
+     "accepted_from_profile": [],
+     "accepted_from_user_message": [],
+     "ok_tools_only": false
+    },
+    "tokens": {
+     "in": 3004,
+     "out": 192,
+     "total": 3196
+    },
+    "llm_calls": 3,
+    "explanations_skipped": [],
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 1.8
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Bengaluru"
+  ]
+ }
+}

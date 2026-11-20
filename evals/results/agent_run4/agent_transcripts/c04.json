@@ -1,0 +1,243 @@
+{
+ "id": "c04",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "remember that I prefer Bengaluru",
+   "result": {
+    "session_id": "6185f573-eb02-4938-8cf2-40a9b46b3d61",
+    "answer": "Got it! Your preferred location has been saved as **Bengaluru**. Let me know if you’d like to see any jobs or have other preferences.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "remember",
+      "args": {
+       "key": "preferred_locations",
+       "value": [
+        "Bengaluru"
+       ]
+      },
+      "ms": 9.7,
+      "result_chars": 47,
+      "error": null,
+      "output": {
+       "saved": {
+        "preferred_locations": [
+         "Bengaluru"
+        ]
+       }
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [],
+     "numbers_checked": [],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "verdict_missing": [],
+     "verdict_mismatch": [],
+     "rules_not_in_job_output": [],
+     "rules_for_unchecked_job": [],
+     "wrong_job_counts": [],
+     "accepted_from_profile": [],
+     "accepted_from_user_message": [],
+     "ok_tools_only": true
+    },
+    "tokens": {
+     "in": 2693,
+     "out": 108,
+     "total": 2801
+    },
+    "llm_calls": 2,
+    "explanations_skipped": [],
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 59.2
+  },
+  {
+   "user": "now show me software jobs for freshers",
+   "result": {
+    "session_id": "6185f573-eb02-4938-8cf2-40a9b46b3d61",
+    "answer": "**Software jobs for freshers (Bengaluru)** – 5 jobs checked  \n\n- Associate Software Development Engineer (SDE) Intern, Hevo Data (job_id: 350) – INELIGIBLE – https://jobs.lever.co/hevodata/993a3ed3-3014-432f-b0f4-28d300d58d9a – trust: no scam signals  \n- Software Engineer, New Grad, Stripe (job_id: 1270) – INELIGIBLE – https://stripe.com/jobs/search?gh_jid=8130876 – trust: no scam signals  \n- Associate SDE, Hevo Data (job_id: 341) – INELIGIBLE – https://jobs.lever.co/hevodata/4eccaf98-ba19-42ea-b040-e0976d4dadfe – trust: no scam signals  \n- Frontend Engineer, Razorpay (job_id: 1149) – INELIGIBLE – https://job-boards.greenhouse.io/razorpaysoftwareprivatelimited/jobs/4731054005 – trust: no scam signals  \n- SDE I, Hevo Data (job_id: 360) – INELIGIBLE – https://jobs.lever.co/hevodata/6cbbe304-e065-4711-bf3e-756795d2bc2a – trust: ghost signal **age_60** (posted ≥ 60 days ago)  \n\nAll listed jobs are marked **INELIGIBLE** for you based on the eligibility check. Let me know if you’d like details on any specific job or want to adjust preferences.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "software fresher",
+       "filters": {
+        "employment_type": null,
+        "work_mode": null,
+        "location": "Bengaluru",
+        "min_monthly_pay_inr": null,
+        "fresher_only": true,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 211.0,
+      "result_chars": 1928,
+      "error": null,
+      "output": {
+       "jobs_returned": 5,
+       "results": [
+        {
+         "job_id": 350,
+         "title": "Associate Software Development Engineer (SDE) Intern",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "final_score": 56,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "graduation_year",
+          "cgpa"
+         ],
+         "failed": [
+          "degree"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://jobs.lever.co/hevodata/993a3ed3-3014-432f-b0f4-28d300d58d9a"
+        },
+        {
+         "job_id": 1270,
+         "title": "Software Engineer, New Grad",
+         "company": "Stripe",
+         "location": "Bangalore / IN-Bengaluru",
+         "final_score": 56,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "specialization",
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [
+          "degree"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://stripe.com/jobs/search?gh_jid=8130876"
+        },
+        {
+         "job_id": 341,
+         "title": "Associate SDE",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "final_score": 30,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [
+          "degree"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://jobs.lever.co/hevodata/4eccaf98-ba19-42ea-b040-e0976d4dadfe"
+        },
+        {
+         "job_id": 1149,
+         "title": "Frontend Engineer",
+         "company": "Razorpay",
+         "location": "Bengaluru / Payments",
+         "final_score": 24,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "degree",
+          "specialization",
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [
+          "experience"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://job-boards.greenhouse.io/razorpaysoftwareprivatelimited/jobs/4731054005"
+        },
+        {
+         "job_id": 360,
+         "title": "SDE I",
+         "company": "Hevo Data",
+         "location": "Bangalore, India",
+         "final_score": 22,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [
+          "degree"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [
+          "age_60"
+         ],
+         "url": "https://jobs.lever.co/hevodata/6cbbe304-e065-4711-bf3e-756795d2bc2a"
+        }
+       ],
+       "name_matches": null,
+       "excluded_companies": null
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [
+      350,
+      1270,
+      341,
+      1149,
+      360
+     ],
+     "numbers_checked": [
+      "60"
+     ],
+     "skipped_small_numbers": 1,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "verdict_missing": [],
+     "verdict_mismatch": [],
+     "rules_not_in_job_output": [],
+     "rules_for_unchecked_job": [],
+     "wrong_job_counts": [],
+     "accepted_from_profile": [],
+     "accepted_from_user_message": [],
+     "ok_tools_only": true
+    },
+    "tokens": {
+     "in": 3362,
+     "out": 482,
+     "total": 3844
+    },
+    "llm_calls": 2,
+    "explanations_skipped": [],
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 2.4
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Bengaluru"
+  ]
+ }
+}

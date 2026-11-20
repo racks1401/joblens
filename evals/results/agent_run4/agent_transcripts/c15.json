@@ -1,0 +1,240 @@
+{
+ "id": "c15",
+ "profile": "p00",
+ "turns": [
+  {
+   "user": "remember that I prefer Hyderabad",
+   "result": {
+    "session_id": "de7e7933-c348-4d9c-bc99-025ba73c659a",
+    "answer": "Your preference for Hyderabad has been saved.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "remember",
+      "args": {
+       "key": "preferred_locations",
+       "value": [
+        "Hyderabad"
+       ]
+      },
+      "ms": 2.6,
+      "result_chars": 47,
+      "error": null,
+      "output": {
+       "saved": {
+        "preferred_locations": [
+         "Hyderabad"
+        ]
+       }
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [],
+     "numbers_checked": [],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "verdict_missing": [],
+     "verdict_mismatch": [],
+     "rules_not_in_job_output": [],
+     "rules_for_unchecked_job": [],
+     "wrong_job_counts": [],
+     "accepted_from_profile": [],
+     "accepted_from_user_message": [],
+     "ok_tools_only": true
+    },
+    "tokens": {
+     "in": 2693,
+     "out": 106,
+     "total": 2799
+    },
+    "llm_calls": 2,
+    "explanations_skipped": [],
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 2.6
+  },
+  {
+   "user": "show jobs in my preferred city",
+   "result": {
+    "session_id": "de7e7933-c348-4d9c-bc99-025ba73c659a",
+    "answer": "**Jobs in Hyderabad**\n\n- JJT Internship, Johnson & Johnson (job_id: 1302) – CHECK  \n- Product Engineer, Johnson & Johnson (job_id: 1304) – CHECK  \n- Calling all Software Engineers!, ValGenesis (job_id: 1288) – INELIGIBLE – https://jobs.lever.co/valgenesis/f2d220b5-abc4-4dc7-b00c-c6b657768739  \n- Software Development Engineer - Java + Distributed Systems, Zscaler (job_id: 1053) – INELIGIBLE – https://job-boards.greenhouse.io/zscaler/jobs/5261571007  \n- Forward Deployed Engineer (AP), HighRadius (job_id: 1138) – INELIGIBLE – https://www.highradius.com/about/careers-list/?gh_jid=7601743003  \n\nAll listed postings have **no scam signals**.",
+    "tool_trace": [
+     {
+      "step": 0,
+      "tool": "search_jobs",
+      "args": {
+       "query": "Hyderabad",
+       "filters": {
+        "employment_type": null,
+        "work_mode": null,
+        "location": "Hyderabad",
+        "min_monthly_pay_inr": null,
+        "fresher_only": false,
+        "eligible_only": false
+       },
+       "limit": 5
+      },
+      "ms": 69.6,
+      "result_chars": 1891,
+      "error": null,
+      "output": {
+       "jobs_returned": 5,
+       "results": [
+        {
+         "job_id": 1302,
+         "title": "JJT Internship",
+         "company": "Johnson & Johnson",
+         "location": null,
+         "final_score": 95,
+         "eligibility": "CHECK",
+         "needs_checking": [
+          "graduation_year"
+         ],
+         "failed": [],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": null
+        },
+        {
+         "job_id": 1304,
+         "title": "Product Engineer",
+         "company": "Johnson & Johnson",
+         "location": null,
+         "final_score": 95,
+         "eligibility": "CHECK",
+         "needs_checking": [
+          "graduation_year",
+          "employment_type"
+         ],
+         "failed": [],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": null
+        },
+        {
+         "job_id": 1288,
+         "title": "Calling all Software Engineers!",
+         "company": "ValGenesis",
+         "location": "Chennai / Hyderabad / Bengaluru",
+         "final_score": 70,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "degree",
+          "specialization",
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [
+          "experience"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [
+          "age_120"
+         ],
+         "url": "https://jobs.lever.co/valgenesis/f2d220b5-abc4-4dc7-b00c-c6b657768739"
+        },
+        {
+         "job_id": 1053,
+         "title": "Software Development Engineer - Java + Distributed Systems",
+         "company": "Zscaler",
+         "location": "Hyderabad, IND / Office - Hyderabad, India",
+         "final_score": 67,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "degree",
+          "specialization",
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [
+          "experience"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [],
+         "url": "https://job-boards.greenhouse.io/zscaler/jobs/5261571007"
+        },
+        {
+         "job_id": 1138,
+         "title": "Forward Deployed Engineer (AP)",
+         "company": "HighRadius",
+         "location": "Hyderabad, Telangana, India / Hyderabad",
+         "final_score": 62,
+         "eligibility": "INELIGIBLE",
+         "needs_checking": [
+          "specialization",
+          "graduation_year",
+          "cgpa",
+          "employment_type"
+         ],
+         "failed": [
+          "degree",
+          "experience"
+         ],
+         "trust_level": "ok",
+         "scam_rules_fired": [],
+         "ghost_signals": [
+          "age_120"
+         ],
+         "url": "https://www.highradius.com/about/careers-list/?gh_jid=7601743003"
+        }
+       ],
+       "name_matches": null,
+       "excluded_companies": null
+      }
+     }
+    ],
+    "grounding": {
+     "ok": true,
+     "job_ids_checked": [
+      1302,
+      1304,
+      1288,
+      1053,
+      1138
+     ],
+     "numbers_checked": [],
+     "skipped_small_numbers": 0,
+     "unsupported_job_ids": [],
+     "unsupported_numbers": [],
+     "jobs_named_without_id": [],
+     "verdict_missing": [],
+     "verdict_mismatch": [],
+     "rules_not_in_job_output": [],
+     "rules_for_unchecked_job": [],
+     "wrong_job_counts": [],
+     "accepted_from_profile": [],
+     "accepted_from_user_message": [],
+     "ok_tools_only": true
+    },
+    "tokens": {
+     "in": 3235,
+     "out": 394,
+     "total": 3629
+    },
+    "llm_calls": 2,
+    "explanations_skipped": [],
+    "stop": null,
+    "summary_refreshed": false,
+    "model": "openai/gpt-oss-120b"
+   },
+   "seconds": 58.7
+  }
+ ],
+ "memory_after": {
+  "preferred_locations": [
+   "Hyderabad"
+  ]
+ }
+}
