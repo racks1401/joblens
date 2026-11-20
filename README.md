@@ -77,23 +77,39 @@ flowchart LR
 cp .env.example .env
 ```
 
-Edit `.env`. To use real LLMs, set `LLM_API_KEY` (Groq) and `GEMINI_API_KEY`. Without keys, JobLens uses an
-offline heuristic extractor and a fake LLM. Set `ADMIN_API_KEY` to a long random string: placeholder values such as
-`change-me` are refused.
+Edit `.env` **before** the first start:
+
+- `ADMIN_API_KEY`: set a random string of 12 or more characters (for example the output of
+  `python -c "import secrets; print(secrets.token_hex(16))"`). The `change-me` placeholder from `.env.example` is
+  refused, so the ingest call below returns 401 until you change it. If you change `.env` later, run
+  `docker compose up -d` again so the API picks it up.
+- `LLM_API_KEY` (Groq) and `GEMINI_API_KEY`: optional. Without them, JobLens uses an offline heuristic extractor and
+  a fake LLM: chat and explanations are canned, extraction is rule-based, and multi-role pasted posts are not split
+  (the whole post becomes one job, titled by its first line).
 
 ```bash
 docker compose up --build
 ```
 
-- API: <http://localhost:8000> (docs at `/docs`)
+- API: <http://localhost:8000> (health at `/health`, docs at `/docs`)
 - UI: <http://localhost:8501>
 
-Migrations run when the API starts. To fetch jobs from the configured boards (this runs extraction, embeddings and
-trust for new jobs):
+Compose uses host ports 8000, 8501 and 5433, so stop anything else on those ports first.
+
+Migrations run when the API starts. The database starts empty: fetch jobs from the configured boards (this runs
+extraction, embeddings and trust for each new job, in the background):
 
 ```bash
 curl -X POST http://localhost:8000/admin/ingest -H "X-API-Key: <your ADMIN_API_KEY>"
 ```
+
+The call returns `{"status":"started"}` at once. A full run over all configured boards takes several minutes; jobs
+show up on the Matches page as they are processed (`docker compose logs -f api` shows progress). On the first run the
+embedding models are downloaded into `./models`.
+
+On a fresh checkout the trust score uses the rule checks and ghost-job signals only: the scam text classifier is not
+in the repository (`/health` shows `"scam_classifier": {"present": false}`). To add it, download the Kaggle EMSCAD
+file to `data/raw/fake_job_postings.csv` and run `python -m ml.train_scam_classifier`.
 
 The UI starts with a **synthetic demo profile** (a made-up B.Tech CSE 2026 fresher). Save your own profile on the
 Profile page; a resume PDF can pre-fill the form.
@@ -136,8 +152,8 @@ All numbers come from `evals/results/`. The samples are small, so read them as i
 | | 134 | vector (MiniLM) | 0.560 | 0.440 | 0.459 | 0.350 |
 | | 134 | hybrid (RRF) | 0.680 | 0.520 | 0.511 | 0.419 |
 
-There was one human reviewer and at most about 25 labels per profile, so differences of a few points are not
-meaningful. Unlabeled jobs in a top 10 count as not relevant: with human labels only, 31 to 33 of the 50 top-10
+The 49 human-reviewed labels were reviewed by the builder (one reviewer), with at most about 25 labels per
+profile, so differences of a few points are not meaningful. Unlabeled jobs in a top 10 count as not relevant: with human labels only, 31 to 33 of the 50 top-10
 results were unlabeled. The 85 drafts were written by an LLM (qwen) and were not hand-labeled. On the 49 pairs that
 were reviewed, the drafts agreed with the human grade on 46 (93.9%).
 
@@ -159,8 +175,9 @@ trust score; only the rule checks can mark a job as having scam signals.
 | Run 4 | 15 | 14/15 | 7 correct, 3 minor, 1 not answered, 4 wrong |
 | Run 5 (re-ran the 4 wrong or unanswered) | 4 | 4/4 | 2 correct, 1 minor, 1 wrong |
 
-Every answer was read against the raw tool outputs (`evals/results/agent_run*/manual_review.md`). A passing
-grounding check does not mean a correct answer: the check cannot read free sentences.
+The agent's answers were checked against raw tool outputs in a manual review (files in
+`evals/results/agent_run*/manual_review.md`). A passing grounding check does not mean a correct answer: the check
+cannot read free sentences.
 
 ## Known limitations
 
@@ -193,5 +210,6 @@ grounding check does not mean a correct answer: the check cannot read free sente
 
 ## How this was built
 
-Built with Claude Code from a spec I wrote. I reviewed the retrieval labels myself (49 pairs), read the agent's
-answers against raw tool outputs, and recorded what still goes wrong in Known limitations.
+Built with Claude Code from a spec I wrote. I reviewed the retrieval labels myself (49 pairs). The agent's
+answers were checked against raw tool outputs in a manual review (files in evals/results), and the mistakes that
+remain are listed in Known limitations.
