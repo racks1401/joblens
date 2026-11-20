@@ -181,7 +181,7 @@ def facts_with_quotes(facts: dict[str, Any] | None) -> None:
         f = facts.get(key) or {}
         rows.append({"Requirement": label, "Value": _fact_value(key, f.get("value")),
                      "Evidence quote from the posting": f.get("evidence") or "—"})
-    st.dataframe(rows, hide_index=True, use_container_width=True,
+    st.dataframe(rows, hide_index=True, use_container_width=True, height=36 * (len(rows) + 1) + 3,
                  column_config={"Evidence quote from the posting": st.column_config.TextColumn(width="large")})
     flags = [x for x in facts.get("red_flags") or [] if x.get("value")]
     if flags:
@@ -193,7 +193,9 @@ def facts_with_quotes(facts: dict[str, Any] | None) -> None:
 def job_card_header(j: dict[str, Any], elig: dict[str, Any] | None) -> None:
     facts = j.get("facts") or {}
     st.markdown(f"### {j['title']}")
-    st.markdown(f"**{j['company'] or 'Company not stated'}** · {j.get('location_raw') or 'location not stated'} · "
+    locs = (facts.get("locations") or {}).get("value") or []
+    st.markdown(f"**{j['company'] or 'Company not stated'}** · "
+                f"{j.get('location_raw') or ', '.join(locs) or 'location not stated'} · "
                 f"{field((facts.get('work_mode') or {}).get('value'))}")
     t = j.get("trust") or {}
     badges = [verdict_badge((elig or {}).get("verdict")), trust_badge(t.get("level"), t.get("score"))]

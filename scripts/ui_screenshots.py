@@ -98,7 +98,7 @@ class CDP:
         print("saved", path, f"{width}x{h}")
 
 
-async def run(ui: str, out: Path, skip_llm: bool) -> None:
+async def run(ui: str, out: Path, skip_llm: bool, pages: set[str]) -> None:
     targets = httpx.get(f"http://127.0.0.1:{PORT}/json").json()
     page = next(t for t in targets if t["type"] == "page")
     cdp = CDP(await websocket_connect(page["webSocketDebuggerUrl"], max_message_size=200 * 1024 * 1024))
@@ -111,45 +111,48 @@ async def run(ui: str, out: Path, skip_llm: bool) -> None:
             print(f"WARNING: {path or 'matches'}: '{marker}' did not appear", file=sys.stderr)
         await cdp.sleep(2)
 
-    await open_page("", "Fit score")
-    await cdp.shot(out / "matches.png")
-
-    # Job detail: open the first match like a user, then (optionally) ask for the explanation.
-    await cdp.click_text("Details")
-    await cdp.wait_text("Calls the LLM only when you click", 60)
-    await cdp.sleep(2)
-    if not skip_llm:
-        await cdp.click_text("Explain this match")
-        if not await cdp.wait_text("Grounding check", 120):
-            print("WARNING: explanation did not appear", file=sys.stderr)
+    if pages & {"matches", "job"}:
+        await open_page("", "Fit score")
+        if "matches" in pages:
+            await cdp.shot(out / "matches.png")
+    if "job" in pages:  # open the first match like a user, then (optionally) ask for the explanation
+        await cdp.click_text("Details")
+        await cdp.wait_text("Calls the LLM only when you click", 60)
         await cdp.sleep(2)
-    await cdp.shot(out / "job_detail.png")
-
-    await open_page("paste", "Posting text")
-    if not skip_llm:
-        await cdp.type_into("textarea", SYNTHETIC_POST)
-        await cdp.sleep(1)
-        await cdp.click_text("Extract")
-        if not await cdp.wait_text("Extracted facts", 240):
-            print("WARNING: paste result did not appear", file=sys.stderr)
-        await cdp.sleep(3)
-    await cdp.shot(out / "paste.png")
-
-    await open_page("profile", "Your details")
-    await cdp.shot(out / "profile.png")
-
-    await open_page("chat", "Known limitations")
-    if not skip_llm:
-        await cdp.type_into("textarea", "Which internships in Bengaluru fit my profile?")
-        await cdp.call("Input.dispatchKeyEvent", type="keyDown", key="Enter", code="Enter", windowsVirtualKeyCode=13)
-        await cdp.call("Input.dispatchKeyEvent", type="keyUp", key="Enter", code="Enter", windowsVirtualKeyCode=13)
-        if not await cdp.wait_text("Tool calls", 180):
-            print("WARNING: chat answer did not appear", file=sys.stderr)
-        await cdp.sleep(2)
-    await cdp.shot(out / "chat.png")
-
-    await open_page("evals", "Label agreement")
-    await cdp.shot(out / "evals.png")
+        if not skip_llm:
+            await cdp.click_text("Explain this match")
+            if not await cdp.wait_text("Grounding check", 120):
+                print("WARNING: explanation did not appear", file=sys.stderr)
+            await cdp.sleep(2)
+        await cdp.shot(out / "job_detail.png")
+    if "paste" in pages:
+        await open_page("paste", "Posting text")
+        if not skip_llm:
+            await cdp.type_into("textarea", SYNTHETIC_POST)
+            await cdp.type_into('input[aria-label="Company (optional)"]', "Sample Fintech (demo)")
+            await cdp.sleep(1)
+            await cdp.click_text("Extract")
+            if not await cdp.wait_text("Extracted facts", 240):
+                print("WARNING: paste result did not appear", file=sys.stderr)
+            await cdp.sleep(3)
+        await cdp.shot(out / "paste.png")
+    if "profile" in pages:
+        await open_page("profile", "Your details")
+        await cdp.shot(out / "profile.png")
+    if "chat" in pages:
+        await open_page("chat", "Known limitations")
+        if not skip_llm:
+            await cdp.type_into("textarea", "Which internships in Bengaluru fit my profile?")
+            for kind in ("keyDown", "keyUp"):
+                await cdp.call("Input.dispatchKeyEvent", type=kind, key="Enter", code="Enter",
+                               windowsVirtualKeyCode=13)
+            if not await cdp.wait_text("Tool calls", 180):
+                print("WARNING: chat answer did not appear", file=sys.stderr)
+            await cdp.sleep(2)
+        await cdp.shot(out / "chat.png")
+    if "evals" in pages:
+        await open_page("evals", "Label agreement")
+        await cdp.shot(out / "evals.png")
     cdp.ws.close()
 
 
@@ -158,6 +161,7 @@ def main() -> None:
     ap.add_argument("--ui", default="http://127.0.0.1:8501")
     ap.add_argument("--out", default="docs/screenshots")
     ap.add_argument("--skip-llm", action="store_true")
+    ap.add_argument("--pages", default="matches,job,paste,profile,chat,evals")
     args = ap.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -175,7 +179,8 @@ def main() -> None:
                 break
             except httpx.HTTPError:
                 time.sleep(0.2)
-        IOLoop.current().run_sync(lambda: run(args.ui.rstrip("/"), out, args.skip_llm), timeout=900)
+        IOLoop.current().run_sync(lambda: run(args.ui.rstrip("/"), out, args.skip_llm,
+                                                   set(args.pages.split(","))), timeout=900)
     finally:
         proc.terminate()
         shutil.rmtree(prof, ignore_errors=True)
