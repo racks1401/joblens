@@ -13,6 +13,7 @@ from app.agent import memory as mem
 from app.agent.loop import run_turn
 from app.agent.tools import JobIdArgs, ToolContext, effective_profile, explain, load_memory
 from app.api.errors import APIError
+from app.api.limits import enforce
 from app.api.routes_profiles import load_profile
 from app.db import get_session
 
@@ -25,7 +26,7 @@ class ChatIn(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
 
 
-@router.post("/chat")
+@router.post("/chat", dependencies=[Depends(enforce("chat", purpose="agent"))])
 def chat_route(body: ChatIn, s: Session = Depends(get_session)) -> dict[str, Any]:
     """One agent turn: {session_id, answer, tool_trace, grounding, tokens, stop}."""
     _, profile = load_profile(s, body.profile_id)
@@ -53,7 +54,7 @@ def memory_delete(profile_id: uuid.UUID, key: str, s: Session = Depends(get_sess
     return {"deleted": n}
 
 
-@router.get("/matches/{profile_id}/{job_id}/explain")
+@router.get("/matches/{profile_id}/{job_id}/explain", dependencies=[Depends(enforce("explain", purpose="explain"))])
 def explain_route(profile_id: uuid.UUID, job_id: int, s: Session = Depends(get_session)) -> dict[str, Any]:
     _, profile = load_profile(s, profile_id)
     memory = load_memory(s, profile_id)

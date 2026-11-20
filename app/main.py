@@ -25,6 +25,7 @@ ROUTERS = [
     "app.api.routes_matches",
     "app.api.routes_chat",
     "app.api.routes_evals",
+    "app.api.limits",
 ]
 
 

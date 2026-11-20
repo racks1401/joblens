@@ -130,8 +130,9 @@ def run_turn(s: Session, profile_id: uuid.UUID, profile: Profile, message: str, 
             outputs.append(tr.output)
             trace.append({"step": step, "tool": call.name, "args": tr.args, "ms": round(tr.ms, 1),
                           "result_chars": len(content), "error": tr.error, "output": tr.output})
-            log_event(log, "agent_tool", tool=call.name, args=tr.args, ms=round(tr.ms, 1), chars=len(content),
-                      error=tr.error)
+            # Argument names only (and the query length): queries and remembered values can copy the user's words.
+            log_event(log, "agent_tool", tool=call.name, arg_keys=sorted(tr.args), ms=round(tr.ms, 1),
+                      query_chars=len(str(tr.args.get("query", ""))), chars=len(content), error=tr.error)
             messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
     else:
         stop = f"max_steps ({a.max_steps}) reached without a final answer"

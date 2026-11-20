@@ -86,6 +86,7 @@ def extract_profile(resume_text: str, llm: LLMClient, prompt_version: str = "pro
             raw, _ = llm.chat_json(messages, ProfileDraft, temperature=0.0, prompt_version=prompt_version)
             return normalize_draft(ProfileDraft.model_validate(_coerce(raw)))
         except (LLMJSONError, ValidationError) as e:
-            log_event(log, "profile_invalid", level=logging.WARNING, attempt=attempt + 1, error=str(e)[:300])
+            # Error type only: validation messages can quote resume-derived values.
+            log_event(log, "profile_invalid", level=logging.WARNING, attempt=attempt + 1, error=type(e).__name__)
             messages = messages + [{"role": "user", "content": f"Invalid output: {str(e)[:1000]}. Return corrected JSON only."}]
     return ProfileDraft()

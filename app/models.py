@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pgvector.sqlalchemy import Vector
@@ -11,6 +11,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     Computed,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -170,3 +171,14 @@ class EvalRun(Base):
     metrics: Mapped[dict[str, Any]] = mapped_column(JSONB)
     git_commit: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class UsageCount(Base):
+    """Per-day counters for demo rate limits; key is a client session id or "*" for the whole app."""
+
+    __tablename__ = "usage_counts"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    action: Mapped[str] = mapped_column(Text, primary_key=True)
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    count: Mapped[int] = mapped_column(Integer, server_default="0", default=0)

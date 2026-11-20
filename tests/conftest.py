@@ -27,12 +27,13 @@ os.environ.update(
         "EMBEDDER": "fake",
         "DATABASE_URL": TEST_DB,
         "ADMIN_API_KEY": "test-admin-key",
+        "DEMO_LIMITS": "false",  # many tests call paste/chat repeatedly; tests/test_limits.py turns limits on
     }
 )
 
 TABLES = [
     "eval_runs", "llm_cache", "user_memory", "chat_messages", "chat_sessions", "explanations",
-    "profiles", "trust_scores", "job_embeddings", "job_facts", "jobs",
+    "usage_counts", "profiles", "trust_scores", "job_embeddings", "job_facts", "jobs",
 ]
 
 

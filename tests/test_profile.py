@@ -54,8 +54,34 @@ def test_from_resume_route(client: TestClient) -> None:
     assert r.json()["draft"]["degree"] == "MCA"
     r2 = client.post("/profiles/from-resume", files={"file": ("cv.pdf", make_pdf(["Hi"]), "application/pdf")})
     assert r2.status_code == 422 and r2.json()["error"]["code"] == "resume_text_too_short"
+    assert "resume_text" not in r.json() and "not stored" in r.json()["note"]
     r3 = client.post("/profiles/from-resume", files={"file": ("cv.pdf", b"not a pdf", "application/pdf")})
-    assert r3.status_code == 400
+    assert r3.status_code == 415 and r3.json()["error"]["code"] == "not_a_pdf"
+    r4 = client.post("/profiles/from-resume", files={"file": ("cv.pdf", b"%PDF-1.4 broken", "application/pdf")})
+    assert r4.status_code == 400
+
+
+@pytest.mark.db
+def test_resume_text_never_stored_and_nothing_cached(client: TestClient, session) -> None:  # type: ignore[no-untyped-def]
+    from sqlalchemy import func, select
+
+    from app.models import LLMCacheRow, ProfileRow
+
+    client.post("/profiles/from-resume", files={"file": ("cv.pdf", make_pdf(RESUME_LINES), "application/pdf")})
+    pid = client.post("/profiles", json={**PROFILE, "resume_text": "my private resume"}).json()["id"]
+    assert session.get(ProfileRow, uuid.UUID(pid)).resume_text is None
+    assert session.execute(select(func.count()).select_from(LLMCacheRow)).scalar() == 0
+
+
+@pytest.mark.db
+def test_demo_profile_is_synthetic_and_read_only(client: TestClient) -> None:
+    from app.demo import DEMO_PROFILE_ID
+
+    d = client.get("/profiles/demo").json()
+    assert d["id"] == str(DEMO_PROFILE_ID) and "synthetic" in d["profile"]["name"]
+    assert client.get("/profiles/demo").json()["id"] == d["id"]  # idempotent
+    assert client.put(f"/profiles/{DEMO_PROFILE_ID}", json=PROFILE).status_code == 403
+    assert client.delete(f"/profiles/{DEMO_PROFILE_ID}").status_code == 403
 
 
 @pytest.mark.db

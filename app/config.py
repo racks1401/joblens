@@ -30,6 +30,7 @@ class EnvSettings(BaseSettings):
     gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
     database_url: str = "postgresql+psycopg://joblens:joblens@localhost:5432/joblens"
     admin_api_key: str = ""
+    demo_limits: bool = True  # DEMO_LIMITS=false turns the chat/paste/explain/resume rate limits off (tests)
     settings_file: str = str(ROOT / "config" / "settings.yaml")
     companies_file: str = str(ROOT / "config" / "companies.yaml")
     fastembed_cache: str = str(ROOT / "models" / "fastembed")
@@ -125,6 +126,21 @@ class BudgetCfg(BaseModel):
         return self.per_purpose.get(purpose, self.daily_tokens)
 
 
+class ActionLimit(BaseModel):
+    per_session: int = 20  # per client session per day
+    per_day: int = 200  # whole app per day
+
+
+class LimitsCfg(BaseModel):
+    """Demo rate limits for actions that call an LLM (the per-purpose token budgets apply as well)."""
+
+    enabled: bool = True
+    actions: dict[str, ActionLimit] = {}
+
+    def for_action(self, action: str) -> ActionLimit:
+        return self.actions.get(action, ActionLimit())
+
+
 class IngestCfg(BaseModel):
     requests_per_second: float = 2
     timeout_s: float = 15
@@ -153,6 +169,7 @@ class YamlSettings(BaseModel):
     trust: TrustCfg
     agent: AgentCfg = AgentCfg()
     budget: BudgetCfg = BudgetCfg()
+    limits: LimitsCfg = LimitsCfg()
     ingest: IngestCfg = IngestCfg()
 
 
