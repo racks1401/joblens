@@ -177,7 +177,7 @@ group; approximate FX table for the pay rule; `eligible_only` filter excludes IN
 
 ### Step 3 — gitignore + profile from resume ✔ (your review needed)
 `.env`, `data/private/`, `data/raw/*` are ignored (checked with `git check-ignore`). Resume file is
-`data/private/Ravi_Kumar_Prabudh_AIML_with_Experience.pdf` (not `resume.pdf`). Draft from `gpt-oss-20b`:
+the resume PDF in `data/private/` (gitignored). Draft from `gpt-oss-20b`:
 `data/private/profile_draft.json`. Saved to the dev DB (id in `data/private/profile_saved.json`); target
 roles, locations, work modes and employment types are **provisional, from the spec's 11.2 example**,
 because the resume does not state them. `experience_years` = 0 (only part-time work listed).
