@@ -210,6 +210,6 @@ cannot read free sentences.
 
 ## How this was built
 
-Built with Claude Code from a spec I wrote. I reviewed the retrieval labels myself (49 pairs). The agent's
-answers were checked against raw tool outputs in a manual review (files in evals/results), and the mistakes that
-remain are listed in Known limitations.
+Built with Claude Code, following a project spec drafted with Claude. I reviewed the retrieval labels myself (49
+pairs). The agent's answers were checked against raw tool outputs in a manual review (files in evals/results), and
+the mistakes that remain are listed in Known limitations.

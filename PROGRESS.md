@@ -1,6 +1,6 @@
 # JobLens build progress
 
-Source of truth: `docs/JobLens_Project_Spec.pdf` (v1.0). Phases follow spec Section 20.
+Source of truth: the project spec (v1.0; kept private, not in this repository). Phases follow spec Section 20.
 
 ## Environment notes (apply to all phases)
 
