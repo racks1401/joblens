@@ -1,9 +1,15 @@
 """Screenshots of every UI page with a local headless Chrome/Edge over the DevTools protocol (no extra installs).
 
     python scripts/ui_screenshots.py [--ui http://127.0.0.1:8501] [--out docs/screenshots] [--skip-llm]
+                                     [--database-url URL | --keep-data]
 
 Uses the synthetic demo profile only (a fresh browser profile, so no saved profile). Pages that call the LLM
 (explain, paste, chat) are driven through the UI like a user would; --skip-llm leaves them at their empty state.
+
+Driving those pages writes to the API's database (the pasted sample job, chat and explanation rows, LLM cache
+entries, rate-limit counters). Afterwards the script removes what it added, using --database-url (default: the
+DATABASE_URL environment variable), which must be the same local database the API uses. It refuses non-local
+hosts. --keep-data skips the clean-up.
 """
 
 from __future__ import annotations
@@ -11,6 +17,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -18,6 +25,7 @@ import tempfile
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 from tornado.ioloop import IOLoop
@@ -41,6 +49,54 @@ Location: Pune (on-site).
 Eligibility for both roles: B.Tech / BE in CSE, IT or ECE, 2026 batch, minimum 7.0 CGPA.
 Last date to apply: 31 December 2026.
 """
+
+
+LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
+SAMPLE_COMPANY = "Sample Fintech (demo)"
+DEMO_PROFILE_ID = "00000000-0000-4000-8000-00000000d3e0"
+COUNTED = ["jobs", "job_facts", "job_embeddings", "trust_scores", "explanations", "chat_sessions", "chat_messages",
+           "user_memory", "llm_cache", "usage_counts", "profiles"]
+
+
+class DevDB:
+    """Snapshot before the run and remove what the run added afterwards (local databases only)."""
+
+    def __init__(self, url: str) -> None:
+        host = urlsplit(url.replace("postgresql+psycopg://", "postgresql://", 1)).hostname
+        if host not in LOCAL_HOSTS:
+            raise SystemExit(f"--database-url must be a local database, not {host!r}")
+        import psycopg
+
+        self.conn = psycopg.connect(url.replace("postgresql+psycopg://", "postgresql://", 1), autocommit=True)
+        self.start = self.conn.execute("SELECT now()").fetchone()[0]  # type: ignore[index]
+        self.counts = self._counts()
+        self.usage = self.conn.execute("SELECT day, action, key, count FROM usage_counts WHERE day = current_date"
+                                       ).fetchall()
+
+    def _counts(self) -> dict[str, int]:
+        return {t: self.conn.execute(f"SELECT count(*) FROM {t}").fetchone()[0] for t in COUNTED}  # type: ignore[index]
+
+    def clean(self) -> None:
+        st = self.start
+        with self.conn.transaction():
+            c = self.conn
+            # the pasted sample post (facts, embeddings and trust go with it: ON DELETE CASCADE)
+            c.execute("DELETE FROM jobs WHERE source = 'paste' AND company = %s AND first_seen_at >= %s",
+                      (SAMPLE_COMPANY, st))
+            c.execute("DELETE FROM chat_sessions WHERE profile_id = %s AND created_at >= %s", (DEMO_PROFILE_ID, st))
+            c.execute("DELETE FROM explanations WHERE profile_id = %s AND created_at >= %s", (DEMO_PROFILE_ID, st))
+            c.execute("DELETE FROM user_memory WHERE profile_id = %s AND updated_at >= %s", (DEMO_PROFILE_ID, st))
+            c.execute("DELETE FROM llm_cache WHERE created_at >= %s", (st,))
+            c.execute("DELETE FROM usage_counts WHERE day = current_date")
+            for row in self.usage:
+                c.execute("INSERT INTO usage_counts (day, action, key, count) VALUES (%s, %s, %s, %s)", row)
+        after = self._counts()
+        left = {t: after[t] - self.counts[t] for t in COUNTED if after[t] != self.counts[t]}
+        if left:
+            print(f"WARNING: rows still differ from before the run: {left}", file=sys.stderr)
+        else:
+            print("dev database restored: row counts match the snapshot taken before the run")
+        self.conn.close()
 
 
 class CDP:
@@ -162,7 +218,13 @@ def main() -> None:
     ap.add_argument("--out", default="docs/screenshots")
     ap.add_argument("--skip-llm", action="store_true")
     ap.add_argument("--pages", default="matches,job,paste,profile,chat,evals")
+    ap.add_argument("--database-url", default=os.environ.get("DATABASE_URL", ""),
+                    help="the API's local database, cleaned after the run (default: $DATABASE_URL)")
+    ap.add_argument("--keep-data", action="store_true", help="leave the rows the run added in the database")
     args = ap.parse_args()
+    if not args.keep_data and not args.database_url:
+        raise SystemExit("pass --database-url (the API's local database) so the run can clean up, or --keep-data")
+    db = None if args.keep_data else DevDB(args.database_url)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     exe = next((b for b in BROWSERS if Path(b).exists() or shutil.which(b)), None)
@@ -184,6 +246,8 @@ def main() -> None:
     finally:
         proc.terminate()
         shutil.rmtree(prof, ignore_errors=True)
+        if db is not None:
+            db.clean()
 
 
 if __name__ == "__main__":
