@@ -18,3 +18,4 @@ models/*.metrics.json
 # private planning files: never commit
 docs/private/
 *[Ss]pec*.pdf
+.streamlit/secrets.toml

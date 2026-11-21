@@ -116,14 +116,28 @@ Profile page; a resume PDF can pre-fill the form.
 
 ### Demo safety
 
-- **Rate limits:** chat, paste, explain and resume upload are limited per browser session and per day (see
-  `limits` in `config/settings.yaml`). They are also refused with a clear message when that purpose's daily LLM token
-  budget is used up.
+- **Rate limits:** chat, paste, explain and resume upload are limited per browser session, per visitor IP and per
+  day (see `limits` in `config/settings.yaml`; IPs are stored only as a keyed hash). They are also refused with a
+  clear message when that purpose's daily LLM token budget is used up.
 - **Resumes:** files are PDF only and 5 MB at most. The resume text is sent to the LLM provider to build a draft, and
   neither the file nor its text is stored or logged.
-- **Admin routes** need `X-API-Key`. The API sends no CORS headers; the UI calls it server-side.
+- **Admin routes** need `X-API-Key`. The API sends no CORS headers; the UI calls it server-side. When `UI_API_KEY`
+  is set (always in public-demo mode), every route except `/health` also needs that key, which only the UI has.
 - **Logs** hold argument names and sizes, not message text or search queries.
 - **The demo profile** cannot be edited, deleted or given chat memory.
+
+### Public demo
+
+A hosted setup (Neon, Render, Streamlit Community Cloud) is described in [docs/DEPLOY.md](docs/DEPLOY.md). It runs
+with `PUBLIC_DEMO=true`, which changes a few things:
+
+- **The first load can take about a minute.** The free API host sleeps when idle and downloads the embedding model
+  again after each start.
+- **No trained scam classifier.** The classifier is not in the repository, so trust scores use the rule checks and
+  ghost-job signals only.
+- **Pasting jobs is turned off**, because a pasted job would be visible to every visitor. Run JobLens locally to
+  paste your own postings.
+- **MiniLM only:** the second embedding model is neither embedded nor served, which keeps the API at about 310 MB.
 
 ### Development
 
