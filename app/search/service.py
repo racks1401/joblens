@@ -173,18 +173,72 @@ def _item(loaded: Loaded, retrieval: float, profile: Profile | None, show_inelig
     )
 
 
-def match(s: Session, profile: Profile, limit: int = 20, show_ineligible: bool = False,
-          filters: Filters | None = None, mode: Mode = "hybrid", include_out_of_scope: bool = False,
-          include_expired: bool = False) -> list[MatchItem]:
-    """Ranked matches for a profile. Expired jobs (deadline passed) are left out unless include_expired."""
+def _matches_order(x: MatchItem) -> tuple[bool, int, float, int]:
+    """Matches page order: INELIGIBLE jobs after ELIGIBLE and CHECK ones, each group by final score. Only the
+    Matches page uses this; final_score itself (search, agent, evals) is unchanged."""
+    ineligible = x.eligibility is not None and x.eligibility.verdict == "INELIGIBLE"
+    return (ineligible, -x.final_score, -x.retrieval_score, x.job_id)
+
+
+def match_page(s: Session, profile: Profile, limit: int = 20, show_ineligible: bool = False,
+               filters: Filters | None = None, mode: Mode = "hybrid", include_out_of_scope: bool = False,
+               include_expired: bool = False) -> tuple[list[MatchItem], int]:
+    """Ranked matches for a profile and how many there were before `limit` (all from the top `search.candidates`
+    retrieval candidates). Expired jobs (deadline passed) are left out unless include_expired."""
     n = get_settings().cfg.search.candidates * (4 if filters and filters.active() else 1)
     cands = retrieve(s, build_profile_query_text(profile), profile_keyword_query(profile), mode, limit=n,
                      include_out_of_scope=include_out_of_scope)
     loaded = load_jobs(s, [j for j, _ in cands])
     items = [it for j, sc in cands if j in loaded
              if (it := _item(loaded[j], sc, profile, show_ineligible, filters, include_expired)) is not None]
-    items.sort(key=lambda x: (-x.final_score, -x.retrieval_score, x.job_id))
-    return items[:limit]
+    items.sort(key=_matches_order)
+    return items[:limit], len(items)
+
+
+def match(s: Session, profile: Profile, limit: int = 20, show_ineligible: bool = False,
+          filters: Filters | None = None, mode: Mode = "hybrid", include_out_of_scope: bool = False,
+          include_expired: bool = False) -> list[MatchItem]:
+    """Ranked matches for a profile (see match_page)."""
+    return match_page(s, profile, limit, show_ineligible, filters, mode, include_out_of_scope, include_expired)[0]
+
+
+class NameHit(BaseModel):
+    """A job found by company or title name, with its eligibility and trust (no fit score: there is no query)."""
+
+    job_id: int
+    title: str
+    company: str
+    url: str | None
+    location_raw: str | None
+    eligibility: EligibilityResult
+    trust: TrustResult | None = None
+    expired: bool = False
+
+
+VERDICT_ORDER = {"ELIGIBLE": 0, "CHECK": 1, "INELIGIBLE": 2}
+
+
+def find_by_name(s: Session, q: str, profile: Profile, limit: int = 20) -> tuple[list[NameHit], int]:
+    """In-scope, active jobs whose company or title contains `q` (case-insensitive), with any verdict and without
+    the retrieval candidate cap. Jobs without extracted facts are left out, as in Matches and search."""
+    # % and _ typed in q match literally ("!" is the LIKE escape character)
+    pattern = "%" + re.sub("[!%_]", lambda m: "!" + str(m.group(0)), q.strip()) + "%"
+    has_facts = select(JobFactsRow.job_id).where(JobFactsRow.job_id == Job.id, JobFactsRow.valid.is_(True)).exists()
+    ids = list(s.execute(
+        select(Job.id).where(Job.is_active.is_(True), Job.in_scope.is_(True), has_facts,
+                             Job.company.ilike(pattern, escape="!") | Job.title.ilike(pattern, escape="!"))
+    ).scalars())
+    loaded = load_jobs(s, ids)
+    hits = []
+    for jid in ids:
+        ld = loaded.get(jid)
+        if ld is None or ld.facts is None:
+            continue
+        hits.append(NameHit(job_id=jid, title=ld.job.title, company=ld.job.company, url=ld.job.url,
+                            location_raw=ld.job.location_raw, eligibility=check_eligibility(profile, ld.facts),
+                            trust=ld.trust, expired=ld.job.expired))
+    hits.sort(key=lambda h: (VERDICT_ORDER[h.eligibility.verdict], h.company.lower(), h.title.lower(), h.job_id))
+    return hits[:limit], len(hits)
 
 
 def search(s: Session, q: str, mode: Mode = "hybrid", model: str | None = None, variant: str | None = None,
