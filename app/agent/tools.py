@@ -17,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.eligibility import check_eligibility, pay_view
+from app.eligibility import NOT_EXTRACTED, check_eligibility, pay_view, usable_facts
 from app.models import Job, JobFactsRow, TrustScore, UserMemory
 from app.schemas import JobFacts, Profile
 
@@ -138,7 +138,7 @@ def _load(s: Session, job_id: int) -> tuple[Job | None, JobFacts | None, TrustSc
     if job is None:
         return None, None, None
     fr = s.get(JobFactsRow, job_id)
-    return job, (JobFacts.model_validate(fr.facts) if fr else None), s.get(TrustScore, job_id)
+    return job, (usable_facts(fr.facts, fr.valid) if fr else None), s.get(TrustScore, job_id)
 
 
 RULE_CODES = {"money", "offplatform", "free_email", "unrealistic_pay", "missing_company"}
@@ -161,9 +161,12 @@ def trust_block(t: TrustScore | None, f: JobFacts | None) -> dict[str, Any]:
 
 
 def elig_block(e: Any) -> dict[str, Any]:
-    return {"eligibility": e.verdict,
-            "needs_checking": [r.rule for r in e.rules if r.status in ("UNKNOWN", "SOFT_FAIL")],
-            "failed": [r.rule for r in e.rules if r.status == "FAIL"]}
+    out = {"eligibility": e.verdict,
+           "needs_checking": [r.rule for r in e.rules if r.status in ("UNKNOWN", "SOFT_FAIL")],
+           "failed": [r.rule for r in e.rules if r.status == "FAIL"]}
+    if not e.facts_extracted:
+        out["requirements"] = NOT_EXTRACTED
+    return out
 
 
 def _pay(f: JobFacts) -> dict[str, Any] | None:
@@ -171,16 +174,20 @@ def _pay(f: JobFacts) -> dict[str, Any] | None:
 
 
 def facts_block(f: JobFacts | None) -> dict[str, Any]:
-    """Stored facts every search result carries; null means the posting (as extracted) does not state it."""
+    """Stored facts every search result carries; null means the posting (as extracted) does not state it.
+    Without extracted facts the fields are left out (not null), so "not listed" cannot be claimed for them."""
     if f is None:
-        return {"pay": None, "apply_deadline": None, "work_mode": None, "employment_type": None,
-                "facts": "not extracted for this job"}
+        return {"requirements": NOT_EXTRACTED}
     return {"pay": _pay(f), "apply_deadline": f.apply_deadline.value, "work_mode": f.work_mode.value,
             "employment_type": f.employment_type.value}
 
 
 def job_card(job: Job, f: JobFacts | None, t: TrustScore | None) -> dict[str, Any]:
-    f = f or JobFacts(title=job.title)
+    if f is None:  # no extracted requirements: say so instead of reporting every field as "not stated"
+        return {"job_id": job.id, "title": job.title, "company": job.company or None, "url": job.url,
+                "location": job.location_raw, "requirements": NOT_EXTRACTED, "expired": job.expired,
+                "trust": trust_block(t, None),
+                "flags": [job.title.lower()] if job.title in ("Title unknown", "Needs human title") else []}
     return {
         "job_id": job.id, "title": job.title, "company": job.company or None, "url": job.url,
         "location": job.location_raw, "type": f.employment_type.value, "work_mode": f.work_mode.value,
@@ -208,7 +215,9 @@ def name_matches(s: Session, query: str, exclude: list[str], limit: int = 3) -> 
     if not words:
         return []
     conds = [c for w in words for c in (Job.company.ilike(f"%{w}%"), Job.title.op("~*")(rf"\m{re.escape(w)}\M"))]
-    q = select(Job).where(Job.is_active.is_(True), Job.in_scope.is_(True), Job.expired.is_(False), or_(*conds)).order_by(Job.id).limit(limit * 3)
+    has_facts = select(JobFactsRow.job_id).where(JobFactsRow.job_id == Job.id, JobFactsRow.valid.is_(True)).exists()
+    q = (select(Job).where(Job.is_active.is_(True), Job.in_scope.is_(True), Job.expired.is_(False), has_facts,
+                           or_(*conds)).order_by(Job.id).limit(limit * 3))
     rows = _drop_excluded(list(s.execute(q).scalars().all()), exclude)
     return rows[:limit]
 
@@ -230,7 +239,7 @@ def search_jobs(ctx: ToolContext, a: SearchJobsArgs) -> dict[str, Any]:
         fr = ctx.session.get(JobFactsRow, r.job_id)
         rows.append({"job_id": r.job_id, "title": r.title, "company": r.company or None,
                      "location": r.location_raw, "final_score": r.final_score,
-                     **facts_block(JobFacts.model_validate(fr.facts) if fr else None),
+                     **facts_block(usable_facts(fr.facts, fr.valid) if fr else None),
                      **(elig_block(r.eligibility) if r.eligibility else
                         {"eligibility": None, "needs_checking": None, "failed": None}),
                      "trust_level": tb["level"],
@@ -243,7 +252,7 @@ def search_jobs(ctx: ToolContext, a: SearchJobsArgs) -> dict[str, Any]:
         if j.id in seen:
             continue
         _, f, t = _load(ctx.session, j.id)
-        e = check_eligibility(ctx.profile, f or JobFacts(title=j.title))
+        e = check_eligibility(ctx.profile, f)
         tb = trust_block(t, None)
         names.append({"job_id": j.id, "title": j.title, "company": j.company or None, "location": j.location_raw,
                       **facts_block(f), **elig_block(e), "trust_level": tb["level"],
@@ -265,11 +274,14 @@ def check_job_eligibility(ctx: ToolContext, a: JobIdArgs) -> dict[str, Any]:
     job, f, _ = _load(ctx.session, a.job_id)
     if job is None:
         return {"error": f"no job with id {a.job_id}"}
-    e = check_eligibility(ctx.profile, f or JobFacts(title=job.title))
+    e = check_eligibility(ctx.profile, f)
     b = elig_block(e)
-    return {"job_id": job.id, "title": job.title, "company": job.company or None, "verdict": e.verdict,
-            "needs_checking": b["needs_checking"], "failed": b["failed"],
-            "rules": [{"rule": r.rule, "status": r.status, "message": r.message} for r in e.rules]}
+    out = {"job_id": job.id, "title": job.title, "company": job.company or None, "verdict": e.verdict,
+           "needs_checking": b["needs_checking"], "failed": b["failed"],
+           "rules": [{"rule": r.rule, "status": r.status, "message": r.message} for r in e.rules]}
+    if not e.facts_extracted:
+        out["requirements"] = NOT_EXTRACTED
+    return out
 
 
 def explain(ctx: ToolContext, a: JobIdArgs) -> dict[str, Any]:
@@ -278,8 +290,12 @@ def explain(ctx: ToolContext, a: JobIdArgs) -> dict[str, Any]:
     job, f, t = _load(ctx.session, a.job_id)
     if job is None:
         return {"error": f"no job with id {a.job_id}"}
-    out = explain_match(ctx.session, ctx.profile_id, ctx.profile, job, f or JobFacts(title=job.title), t,
-                        ctx.explain_llm, ctx.tokens)
+    if f is None:  # nothing to explain against: no LLM call, and the rule engine's verdict is CHECK
+        reason = f"{NOT_EXTRACTED.lower()} for this job"
+        ctx.skipped.append({"job_id": job.id, "reason": reason})
+        return {"job_id": job.id, "title": job.title, "explanation_skipped": True, "reason": reason,
+                "eligibility": "CHECK", "requirements": NOT_EXTRACTED, "trust_level": t.level if t else None}
+    out = explain_match(ctx.session, ctx.profile_id, ctx.profile, job, f, t, ctx.explain_llm, ctx.tokens)
     if "error" in out:
         ctx.skipped.append({"job_id": job.id, "reason": out["error"]})
         return {"job_id": job.id, "title": job.title, "explanation_skipped": True, "reason": out.pop("error")}
@@ -294,10 +310,10 @@ def compare_jobs(ctx: ToolContext, a: CompareJobsArgs) -> dict[str, Any]:
             rows.append({"job_id": jid, "error": "not found"})
             continue
         c = job_card(job, f, t)
-        e = check_eligibility(ctx.profile, f or JobFacts(title=job.title))
+        e = check_eligibility(ctx.profile, f)
         rows.append({k: c[k] for k in ("job_id", "title", "company", "type", "work_mode", "locations", "pay",
                                        "duration_months", "min_cgpa", "experience_min_years", "required_skills",
-                                       "trust")} | elig_block(e))
+                                       "requirements", "trust") if k in c} | elig_block(e))
     return {"jobs_compared": len(rows), "jobs": rows}
 
 

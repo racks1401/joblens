@@ -146,6 +146,9 @@ class RuleResult(BaseModel):
 class EligibilityResult(BaseModel):
     verdict: Verdict
     rules: list[RuleResult]
+    # False when the job has no usable extracted requirements (no facts row yet, or extraction failed). Every rule is
+    # then UNKNOWN and the verdict is CHECK: missing facts are never read as "the posting states nothing".
+    facts_extracted: bool = True
 
 
 # ---------- Trust (spec 13) ----------

@@ -33,6 +33,12 @@ except APIError as e:
     show_error(e)
     st.stop()
 
+if not (j.get("facts") and j.get("facts_valid")):
+    st.warning("**Requirements not extracted yet.** This job's requirements have not been extracted (or extraction "
+               "failed), so it cannot be checked against your profile: every eligibility rule below needs checking, "
+               "and the job is left out of Matches until extraction has run. Read the original posting.",
+               icon=":material/pending:")
+
 with st.container(border=True):
     job_card_header(j, j.get("eligibility"))
     if j.get("url"):

@@ -7,16 +7,18 @@ from collections.abc import Sequence
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Job, JobEmbedding
+from app.models import Job, JobEmbedding, JobFactsRow
 
 
 def vector_search(s: Session, qvec: Sequence[float], model: str, variant: str, limit: int = 50,
                   include_out_of_scope: bool = False) -> list[tuple[int, float]]:
-    """Active jobs nearest to qvec: [(job_id, similarity = 1 - cosine distance)]."""
+    """Active jobs nearest to qvec: [(job_id, similarity = 1 - cosine distance)]. Jobs without valid extracted facts
+    are left out until extraction has run."""
     dist = JobEmbedding.embedding.cosine_distance(list(qvec)).label("dist")
     q = (
         select(JobEmbedding.job_id, dist)
         .join(Job, Job.id == JobEmbedding.job_id)
+        .join(JobFactsRow, (JobFactsRow.job_id == Job.id) & JobFactsRow.valid.is_(True))
         .where(Job.is_active.is_(True), JobEmbedding.model_name == model, JobEmbedding.text_variant == variant)
         .where(Job.in_scope.is_(True) if not include_out_of_scope else Job.id.is_not(None))
         .order_by(dist, JobEmbedding.job_id)

@@ -89,13 +89,11 @@ def get_job(job_id: int, profile_id: uuid.UUID | None = None, s: Session = Depen
     out = job_out(s, job)
     if profile_id is not None:
         from app.api.routes_profiles import load_profile
-        from app.eligibility import check_eligibility
-        from app.schemas import JobFacts
+        from app.eligibility import check_eligibility, usable_facts
 
         _, profile = load_profile(s, profile_id)
-        facts = s.get(JobFactsRow, job.id)
-        out.eligibility = check_eligibility(profile, JobFacts.model_validate(facts.facts) if facts
-                                            else JobFacts(title=job.title))
+        row = s.get(JobFactsRow, job.id)
+        out.eligibility = check_eligibility(profile, usable_facts(row.facts, row.valid) if row else None)
     return out
 
 

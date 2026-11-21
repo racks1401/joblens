@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import Any
 
 from app.extract.vocab import BACHELOR_LEVEL, COMPUTING_FAMILY, MASTER_LEVEL, norm_specialization
 from app.schemas import EligibilityResult, JobFacts, Money, Profile, RuleResult
@@ -11,6 +12,26 @@ from app.schemas import EligibilityResult, JobFacts, Money, Profile, RuleResult
 FX_TO_INR = {"INR": 1.0, "USD": 84.0, "EUR": 90.0, "GBP": 106.0, "SGD": 62.0, "AED": 23.0}
 HOURS_PER_MONTH = 160
 NCR = {"delhi", "delhi ncr", "new delhi", "gurugram", "gurgaon", "noida", "ghaziabad", "faridabad"}
+
+
+NOT_EXTRACTED = "Requirements not extracted yet"
+RULE_NAMES = ["degree", "specialization", "graduation_year", "cgpa", "experience", "location", "pay",
+              "employment_type"]
+
+
+def usable_facts(facts: dict[str, Any] | None, valid: bool | None) -> JobFacts | None:
+    """Stored facts that eligibility may judge, or None when there are none to judge: no job_facts row yet, or a
+    row whose extraction failed validation (stored as an empty JobFacts)."""
+    if facts is None or not valid:
+        return None
+    return JobFacts.model_validate(facts)
+
+
+def not_extracted_result() -> EligibilityResult:
+    """Eligibility for a job without usable facts: every rule needs checking, so the verdict is CHECK, never ELIGIBLE."""
+    rules = [_rr(rule=name, status="UNKNOWN", message=f"{NOT_EXTRACTED}: this rule cannot be checked", evidence=None)
+             for name in RULE_NAMES]
+    return EligibilityResult(verdict="CHECK", rules=rules, facts_extracted=False)
 
 
 def _fmt(xs: Iterable[object]) -> str:
@@ -199,8 +220,13 @@ def rule_employment_type(p: Profile, f: JobFacts) -> RuleResult:
                       evidence=ev)
 
 
-def check_eligibility(p: Profile, f: JobFacts) -> EligibilityResult:
-    """Any FAIL -> INELIGIBLE; else any UNKNOWN or SOFT_FAIL -> CHECK; else ELIGIBLE."""
+def check_eligibility(p: Profile, f: JobFacts | None) -> EligibilityResult:
+    """Any FAIL -> INELIGIBLE; else any UNKNOWN or SOFT_FAIL -> CHECK; else ELIGIBLE.
+
+    f is None when the job has no usable extracted facts: then every rule is UNKNOWN ("requirements not extracted
+    yet") and the verdict is CHECK. An empty JobFacts would wrongly pass the experience, CGPA and pay rules."""
+    if f is None:
+        return not_extracted_result()
     rules = [
         rule_degree(p, f),
         rule_specialization(p, f),

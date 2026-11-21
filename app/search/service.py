@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.eligibility import check_eligibility, monthly_inr, pay_view
+from app.eligibility import check_eligibility, monthly_inr, pay_view, usable_facts
 from app.models import Job, JobFactsRow, TrustScore
 from app.schemas import EligibilityResult, JobFacts, Profile, TrustResult
 from app.search.embed import get_embedder, serving_model
@@ -67,7 +67,7 @@ class MatchItem(BaseModel):
 @dataclass
 class Loaded:
     job: Job
-    facts: JobFacts
+    facts: JobFacts | None  # None: no usable extracted facts (not extracted yet, or extraction failed)
     trust: TrustResult | None
 
 
@@ -76,14 +76,14 @@ def load_jobs(s: Session, ids: Sequence[int]) -> dict[int, Loaded]:
     if not ids:
         return {}
     rows = s.execute(
-        select(Job, JobFactsRow.facts, TrustScore)
+        select(Job, JobFactsRow.facts, JobFactsRow.valid, TrustScore)
         .outerjoin(JobFactsRow, JobFactsRow.job_id == Job.id)
         .outerjoin(TrustScore, TrustScore.job_id == Job.id)
         .where(Job.id.in_(list(ids)))
     ).all()
     out = {}
-    for job, facts, tr in rows:
-        f = JobFacts.model_validate(facts) if facts else JobFacts(title=job.title, company=job.company or None)
+    for job, facts, valid, tr in rows:
+        f = usable_facts(facts, valid)
         t = TrustResult(score=tr.score, level=tr.level, reasons=tr.reasons, scam_prob=tr.scam_prob) if tr else None  # type: ignore[arg-type]
         out[job.id] = Loaded(job, f, t)
     return out
@@ -119,6 +119,8 @@ def _loc_hit(needle: str, job: Job, f: JobFacts) -> bool:
 
 def passes(loaded: Loaded, flt: Filters, elig: EligibilityResult | None) -> bool:
     f, job = loaded.facts, loaded.job
+    if f is None:
+        return False
     if flt.employment_type and f.employment_type.value != flt.employment_type:
         return False
     if flt.work_mode and f.work_mode.value != flt.work_mode:
@@ -148,6 +150,8 @@ def _item(loaded: Loaded, retrieval: float, profile: Profile | None, show_inelig
     if loaded.job.expired and not include_expired:
         return None
     f = loaded.facts
+    if f is None:  # hidden until its requirements are extracted (retrieval already skips these; this is a backstop)
+        return None
     elig = check_eligibility(profile, f) if profile else None
     if elig and elig.verdict == "INELIGIBLE" and not show_ineligible:
         return None
