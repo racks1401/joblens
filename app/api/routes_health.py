@@ -32,4 +32,5 @@ def health() -> dict[str, Any]:
             "cache_present": emb_cache.exists() and any(emb_cache.iterdir()),
         },
         "scam_classifier": {"present": clf.exists()},
+        "public_demo": s.env.public_demo,
     }

@@ -14,6 +14,9 @@ import httpx
 import streamlit as st
 
 API_URL = os.environ.get("API_URL", "http://localhost:8000")
+# Shared secret the API requires when UI_API_KEY is set on both sides. Environment only (on Streamlit Community
+# Cloud, root-level secrets are environment variables), never a file in the repository.
+UI_API_KEY = os.environ.get("UI_API_KEY", "").strip()
 
 VERDICT = {  # word + icon + colour, so colour is never the only signal
     "ELIGIBLE": ("green", ":material/check_circle:", "ELIGIBLE"),
@@ -39,9 +42,27 @@ def client_session_id() -> str:
     return str(st.session_state.client_session_id)
 
 
+def visitor_forwarded_for() -> str | None:
+    """The visitor's X-Forwarded-For as the UI host's proxy set it (the API picks the trusted entry)."""
+    try:
+        return st.context.headers.get("X-Forwarded-For")
+    except Exception:  # noqa: BLE001 - no browser context (scripts, tests)
+        return None
+
+
+def api_headers() -> dict[str, str]:
+    h = {"X-Session-Id": client_session_id()}
+    if UI_API_KEY:
+        h["X-UI-Key"] = UI_API_KEY
+    xff = visitor_forwarded_for()
+    if xff:
+        h["X-Visitor-Forwarded-For"] = xff[:500]
+    return h
+
+
 def api(method: str, path: str, timeout: float = 120, **kw: Any) -> Any:
     """Call the API; raise APIError with the server's message on 4xx/5xx."""
-    headers = {"X-Session-Id": client_session_id(), **kw.pop("headers", {})}
+    headers = {**api_headers(), **kw.pop("headers", {})}
     try:
         r = httpx.request(method, f"{API_URL}{path}", headers=headers, timeout=timeout, **kw)
     except httpx.HTTPError as e:

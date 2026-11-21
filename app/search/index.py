@@ -16,7 +16,8 @@ from app.search.text import VARIANTS, build_job_search_text, facts_from_row
 def process_jobs(s: Session, job_ids: Sequence[int], models: Sequence[str] | None = None, batch: int = 128,
                  **_: object) -> dict[str, int]:
     """Embed jobs in batches; upsert job_embeddings; update search_text (drives the FTS column)."""
-    models = list(models or model_keys())
+    allowed = model_keys()
+    models = [m for m in models if m in allowed] if models else allowed  # public-demo mode: default model only
     n = 0
     ids = list(job_ids)
     for i in range(0, len(ids), batch):

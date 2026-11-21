@@ -22,6 +22,14 @@ except APIError as e:
     show_error(e)
     st.stop()
 profile_banner(prof)
+try:
+    public_demo = bool(api("GET", "/limits").get("public_demo"))
+except APIError:
+    public_demo = False
+if public_demo:
+    st.info("Pasting jobs is turned off in the public demo, because a pasted job would be visible to every visitor. "
+            "Run JobLens locally (see the README) to paste your own postings.", icon=":material/lock:")
+    st.stop()
 st.caption("Paste the full text of a posting (for example from WhatsApp, email or a college portal). The text is sent "
            "to the LLM provider to extract its requirements. A post listing several roles is split into one job per "
            "role, using only the posting's own lines.")

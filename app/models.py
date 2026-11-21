@@ -174,7 +174,7 @@ class EvalRun(Base):
 
 
 class UsageCount(Base):
-    """Per-day counters for demo rate limits; key is a client session id or "*" for the whole app."""
+    """Per-day counters for demo rate limits; key is a client session id, "ip:<keyed hash>" for a visitor IP, or "*" for the whole app."""
 
     __tablename__ = "usage_counts"
 

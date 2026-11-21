@@ -38,7 +38,19 @@ def job_out(s: Session, job: Job, include_text: bool = True) -> JobOut:
     )
 
 
-@router.post("/jobs/paste", response_model=JobOut, dependencies=[Depends(enforce("paste", purpose="facts"))])
+def paste_allowed() -> None:
+    """Public-demo mode turns pasting off: a stored paste would be shown to every visitor (pasted jobs are always in
+    scope), and job ids are sequential, so any per-session filter would have to cover every read path."""
+    from app.config import get_settings
+
+    if get_settings().env.public_demo:
+        raise APIError(403, "paste_disabled",
+                       "Pasting jobs is turned off in the public demo, because pasted jobs would be visible to every "
+                       "visitor. Run JobLens locally to paste your own postings.")
+
+
+@router.post("/jobs/paste", response_model=JobOut,
+             dependencies=[Depends(paste_allowed), Depends(enforce("paste", purpose="facts"))])
 def paste_job(body: PasteJobIn, s: Session = Depends(get_session)) -> JobOut:
     """Add a pasted job and run it through the same pipeline as ingested jobs."""
     from app.ingest.split import split_post

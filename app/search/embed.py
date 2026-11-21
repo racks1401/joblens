@@ -61,7 +61,19 @@ class FakeEmbedder:
 
 
 def model_keys() -> list[str]:
-    return list(get_settings().cfg.embeddings.models)
+    """Models that ingest embeds with. In public-demo mode only the default model (keeps the host under 512 MB)."""
+    s = get_settings()
+    if s.env.public_demo:
+        return [s.cfg.embeddings.default_model]
+    return list(s.cfg.embeddings.models)
+
+
+def serving_model(requested: str | None) -> str:
+    """The model a search uses. In public-demo mode a requested model is ignored, so no visitor can load another."""
+    s = get_settings()
+    if s.env.public_demo or not requested:
+        return s.cfg.embeddings.default_model
+    return requested
 
 
 @lru_cache

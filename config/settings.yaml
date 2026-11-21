@@ -32,7 +32,7 @@ embeddings:
   models:
     minilm: {name: sentence-transformers/all-MiniLM-L6-v2, query_prefix: ""}
     bge-small: {name: BAAI/bge-small-en-v1.5, query_prefix: "Represent this sentence for searching relevant passages: "}
-  batch_size: 64
+  batch_size: 8                 # measured: a 128-job ingest batch peaks at ~1.2 GB RSS with 64, ~460 MB with 8
 search: {rrf_k: 60, candidates: 50}
 ranking: {w_retrieval: 0.65, w_skill: 0.35, check_penalty: 0.05, risky_factor: 0.7, caution_factor: 0.9}
 trust:
@@ -48,11 +48,14 @@ budget:                          # each purpose counts only its own calls (agent
   per_purpose: {agent: 180000, summary: 20000, explain: 40000}   # Groq free tier: 200K tokens/day per model
 limits:                          # demo rate limits per UTC day; budgets above still apply
   enabled: true
-  actions:
-    chat: {per_session: 20, per_day: 300}
-    paste: {per_session: 5, per_day: 40}
-    explain: {per_session: 15, per_day: 150}
-    resume: {per_session: 3, per_day: 30}
+  # Proxies between the visitor and the UI that append to X-Forwarded-For (1 = the UI host's own proxy).
+  # The visitor IP is the entry this many places from the right, so a visitor cannot pick it by sending the header.
+  proxy_hops: ${VISITOR_PROXY_HOPS:-1}
+  actions:                       # per_ip: per visitor IP (a college network shares one IP, so it is above per_session)
+    chat: {per_session: 20, per_ip: 40, per_day: 300}
+    paste: {per_session: 5, per_ip: 10, per_day: 40}
+    explain: {per_session: 15, per_ip: 30, per_day: 150}
+    resume: {per_session: 3, per_ip: 6, per_day: 30}
 ingest:
   requests_per_second: 2
   timeout_s: 15

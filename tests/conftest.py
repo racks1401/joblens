@@ -28,6 +28,8 @@ os.environ.update(
         "DATABASE_URL": TEST_DB,
         "ADMIN_API_KEY": "test-admin-key",
         "DEMO_LIMITS": "false",  # many tests call paste/chat repeatedly; tests/test_limits.py turns limits on
+        "PUBLIC_DEMO": "false",  # tests/test_public_demo.py turns public-demo mode on per test
+        "UI_API_KEY": "",  # unset: the UI-to-API key check is off unless a test sets it
     }
 )
 

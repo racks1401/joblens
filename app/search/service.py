@@ -16,7 +16,7 @@ from app.config import get_settings
 from app.eligibility import check_eligibility, monthly_inr, pay_view
 from app.models import Job, JobFactsRow, TrustScore
 from app.schemas import EligibilityResult, JobFacts, Profile, TrustResult
-from app.search.embed import get_embedder
+from app.search.embed import get_embedder, serving_model
 from app.search.hybrid import rrf
 from app.search.keyword import keyword_search
 from app.search.rank import final_score, skill_overlap
@@ -94,7 +94,7 @@ def retrieve(s: Session, query_text: str, keyword_query: str, mode: Mode, model:
              include_out_of_scope: bool = False) -> list[tuple[int, float]]:
     """Candidate ids with a 0..1 retrieval score. Keyword scores are divided by the max ts_rank_cd."""
     st = get_settings().cfg
-    model = model or st.embeddings.default_model
+    model = serving_model(model)
     variant = variant or st.embeddings.default_variant
     n = limit or st.search.candidates
     kw: list[tuple[int, float]] = []

@@ -35,6 +35,9 @@ class EnvSettings(BaseSettings):
     companies_file: str = str(ROOT / "config" / "companies.yaml")
     fastembed_cache: str = str(ROOT / "models" / "fastembed")
     embedder: str = "fastembed"  # fastembed | fake (tests)
+    # PUBLIC_DEMO=true: hosted demo mode. Only the default embedding model is embedded and served, pasting jobs is
+    # off, and every route except /health needs the UI key (UI_API_KEY, read from the process environment only).
+    public_demo: bool = False
 
     @field_validator("*", mode="before")
     @classmethod
@@ -128,6 +131,7 @@ class BudgetCfg(BaseModel):
 
 class ActionLimit(BaseModel):
     per_session: int = 20  # per client session per day
+    per_ip: int = 0  # per visitor IP per day; 0 = no IP limit
     per_day: int = 200  # whole app per day
 
 
@@ -135,6 +139,7 @@ class LimitsCfg(BaseModel):
     """Demo rate limits for actions that call an LLM (the per-purpose token budgets apply as well)."""
 
     enabled: bool = True
+    proxy_hops: int = 1  # trusted proxies that append to X-Forwarded-For; visitor IP = entry this many from the right
     actions: dict[str, ActionLimit] = {}
 
     def for_action(self, action: str) -> ActionLimit:

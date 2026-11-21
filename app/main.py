@@ -9,8 +9,10 @@ import uuid
 from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 
-from app.api.errors import install_error_handlers
+from app.api.deps import UI_KEY_HEADER, ui_key_error
+from app.api.errors import error_body, install_error_handlers
 from app.db import db_status
 from app.logs import log_event, request_id_var, setup_logging
 
@@ -42,6 +44,13 @@ def create_app() -> FastAPI:
                 raise
             continue
         app.include_router(mod.router)
+
+    @app.middleware("http")
+    async def ui_key(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+        err = ui_key_error(request.url.path, request.headers.get(UI_KEY_HEADER))
+        if err is not None:
+            return JSONResponse(error_body(err.code, err.message), status_code=err.status)
+        return await call_next(request)
 
     @app.middleware("http")
     async def request_id(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:

@@ -34,6 +34,8 @@ def search_route(
     include_expired: bool = False,
     s: Session = Depends(get_session),
 ) -> dict[str, Any]:
+    if get_settings().env.public_demo:
+        model = None  # public-demo mode serves the default model only
     if model and model not in get_settings().cfg.embeddings.models:
         raise APIError(400, "unknown_model", f"model must be one of {list(get_settings().cfg.embeddings.models)}")
     profile = load_profile(s, profile_id)[1] if profile_id else None
